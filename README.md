@@ -11,8 +11,8 @@
 3. Tạo file `.env` trong thư mục `backend` với nội dung:
    ```env
    DB_HOST=localhost
-   DB_USER=root
-   DB_PASSWORD=admin
+   DB_USER=
+   DB_PASSWORD=.
    DB_NAME=badminton_shop
    DB_PORT=3306
    PORT=8000
