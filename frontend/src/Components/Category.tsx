@@ -1,6 +1,4 @@
 import img1 from "../assets/c1.jpg";
-import img2 from "../assets/c2.jpg";
-import img4 from "../assets/c4.jpg";
 const Category = () => {
   const categories = [
     {
@@ -34,7 +32,7 @@ const Category = () => {
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="flex flex-col items-center gap-2 mb-8 md:mb-10">
           <h2 className="font-bold text-4xl text-gray-900">Shop by Category</h2>
-          <p className="font-normal text-lg md:text-xl text-gray-600">
+          <p className="font-normal text-lg md:text-xl text-gray-600 mt-4">
             Find the perfect equipment for your game
           </p>
         </div>
@@ -46,7 +44,7 @@ const Category = () => {
               className="group relative overflow-hidden rounded-2xl
                  shadow-[0_8px_24px_rgba(0,0,0,0.12)] hover:shadow-[0_12px_32px_rgba(0,0,0,0.18)]
                  ring-1 ring-black/5 hover:ring-black/10
-                 transition-all duration-500 hover:-translate-y-0.5 bg-gray-100 dark:bg-gray-900"
+                 transition-all duration-500 hover:-translate-y-1.5 bg-gray-100 dark:bg-gray-900"
             >
               <div className="aspect-square w-full overflow-hidden">
                 <img
