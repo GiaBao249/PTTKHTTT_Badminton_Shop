@@ -1,19 +1,16 @@
+import { Routes, Route } from "react-router-dom";
 import Header from "./Components/Header";
-import Carousel from "./Components/Carousel";
-import Category from "./Components/Category";
-import FeaturedProducts from "./Components/FeaturedProducts";
-import HotProducts from "./Components/HotProducts";
+import HomePage from "./HomePage/HomePage";
+import ProductsPage from "./ProductsPage/ProductsPage";
 import Footer from "./Components/Footer";
-import Service from "./Components/service";
 const App = () => {
   return (
-    <div>
+    <div className="App">
       <Header />
-      <Carousel />
-      <Category />
-      <FeaturedProducts />
-      <HotProducts />
-      <Service />
+      <Routes>
+        <Route path="/" element={<HomePage />} />
+        <Route path="/ProductsPage" element={<ProductsPage />} />
+      </Routes>
       <Footer />
     </div>
   );

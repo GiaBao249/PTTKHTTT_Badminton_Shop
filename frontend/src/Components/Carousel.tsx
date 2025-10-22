@@ -88,7 +88,7 @@ const Carousel = () => {
                   <p className="font-light text-lg md:text-2xl lg:text-3xl text-white/90 drop-shadow-lg max-w-2xl">
                     {slide.subtitle}
                   </p>
-                  <button className="mt-4 md:mt-8 px-8 md:px-10 py-3 md:py-4 bg-white text-gray-900 font-semibold text-base md:text-lg rounded-full hover:bg-gray-100 hover:scale-105 transition-all duration-300 shadow-2xl flex items-center gap-2 group">
+                  <button className="mt-4 md:mt-8 px-8 md:px-10 py-3 md:py-4 bg-white text-gray-900 font-semibold text-base md:text-lg rounded-full hover:bg-gray-100 hover:scale-110 transition-all duration-300 shadow-2xl flex items-center gap-2 group">
                     {slide.cta}
                     <ShoppingBag className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
                   </button>
@@ -99,27 +99,38 @@ const Carousel = () => {
         ))}
       </Swiper>
 
-      <style>{`
-        @keyframes slide-up {
-          from {
-            opacity: 0;
-            transform: translateY(30px);
+      <style>
+        {`
+          @keyframes ken-burns {
+            0% {
+              transform: scale(1);
+            }
+            100% {
+              transform: scale(1.1);
+            }
           }
-          to {
-            opacity: 1;
-            transform: translateY(0);
-          }
-        }
 
-        @keyframes ken-burns {
-          0%, 100% {
-            transform: scale(1.05);
+          .swiper-slide-active img {
+            animation: ken-burns 10s ease-out forwards;
           }
-          50% {
-            transform: scale(1.15);
+
+          .swiper-slide:not(.swiper-slide-active) img {
+            animation: none;
+            transform: scale(1);
           }
-        }
-      `}</style>
+
+          @keyframes slide-up {
+            from {
+              opacity: 0;
+              transform: translateY(30px);
+            }
+            to {
+              opacity: 1;
+              transform: translateY(0);
+            }
+          }
+        `}
+      </style>
     </div>
   );
 };

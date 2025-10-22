@@ -1,33 +1,90 @@
-import { ShoppingCart, Moon, User, Search } from "lucide-react";
+import { ShoppingCart, Moon, User, Search, ChevronDown } from "lucide-react";
+import { useState } from "react";
+import { Link } from "react-router-dom";
 
 const Header = () => {
+  const [isProductsOpen, setIsProductsOpen] = useState(false);
   return (
     <header className="sticky top-0 z-50 bg-white border-b border-black/10">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="grid grid-cols-[auto_1fr_auto] items-center h-16 md:h-20 gap-4">
           <div className="flex items-center">
-            <a
-              href="#"
+            <Link
+              to="/"
               className="font-bold text-2xl tracking-tight text-gray-900"
             >
               N&B
-            </a>
+            </Link>
           </div>
           <div className="flex justify-center">
             <div className="flex items-center gap-6 lg:gap-8">
               <nav className="hidden md:flex items-center gap-6 lg:gap-8 text-sm">
-                <a
-                  href="#"
+                <Link
+                  to="/"
                   className="text-gray-700 hover:text-black transition-colors"
                 >
                   Home
-                </a>
-                <a
-                  href="#"
-                  className="text-gray-700 hover:text-black transition-colors"
-                >
-                  Products
-                </a>
+                </Link>
+                <div className="relative">
+                  <button
+                    onClick={() => setIsProductsOpen(!isProductsOpen)}
+                    className="flex items-center gap-1 text-gray-700 hover:text-black"
+                  >
+                    Product
+                    <ChevronDown
+                      size={16}
+                      className={`transition-transform ${
+                        isProductsOpen ? "rotate-180" : ""
+                      }`}
+                    />
+                  </button>
+                  {isProductsOpen && (
+                    <div className="absolute top-full text-left left-0 mt-2 w-48 bg-white border border-black/10 rounded-lg shadow-lg py-2 z-50">
+                      <Link
+                        to="/ProductsPage?category=all"
+                        className="block px-4 py-2 text-gray-700 hover:bg-black/10 transition-colors"
+                        onClick={() => setIsProductsOpen(false)}
+                      >
+                        All Products
+                      </Link>
+                      <Link
+                        to="/ProductsPage?category=rackets"
+                        onClick={() => setIsProductsOpen(false)}
+                        className="block px-4 py-2 text-gray-700 hover:bg-black/10 transition-colors"
+                      >
+                        Rackets
+                      </Link>
+                      <Link
+                        to="/ProductsPage?category=shoes"
+                        onClick={() => setIsProductsOpen(false)}
+                        className="block px-4 py-2 text-gray-700 hover:bg-black/10 transition-colors"
+                      >
+                        Shoes
+                      </Link>
+                      <Link
+                        to="/ProductsPage?category=shuttlecocks"
+                        onClick={() => setIsProductsOpen(false)}
+                        className="block px-4 py-2 text-gray-700 hover:bg-black/10 transition-colors"
+                      >
+                        Shuttlecocks
+                      </Link>
+                      <Link
+                        to="/ProductsPage?category=strings"
+                        className="block px-4 py-2 text-gray-700 hover:bg-black/10 transition-colors"
+                        onClick={() => setIsProductsOpen(false)}
+                      >
+                        Strings
+                      </Link>
+                      <Link
+                        to="/ProductsPage?category=accessories"
+                        onClick={() => setIsProductsOpen(false)}
+                        className="block px-4 py-2 text-gray-700 hover:bg-black/10 transition-colors"
+                      >
+                        Accessories
+                      </Link>
+                    </div>
+                  )}
+                </div>
                 <a
                   href="#"
                   className="text-gray-700 hover:text-black transition-colors"
