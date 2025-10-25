@@ -2,36 +2,23 @@ import { useState } from "react";
 import ProductCard from "./ProductCard";
 import img1 from "../assets/c2.jpg";
 import { MoveRight } from "lucide-react";
+import type { Products } from "../types/ProductTypes/ProductType";
+type Description = {
+  title: string;
+  des: string;
+  shop: string;
+};
 const HotProducts = () => {
-  type Description = {
-    title: string;
-    des: string;
-    shop: string;
-  };
   const [selectedDescription, setSelectedDescription] = useState<Description>({
     title: "Rackets",
     des: "Discover our premium collection of professional-grade rackets. Engineered for performance, designed for champions",
     shop: "Racket Shop",
   });
 
-  type Products = {
-    title: string;
-    img: string;
-    price: number;
-    isSale: boolean;
-    sale: { percent: string };
-    rating: number;
-    countRating: number;
-    company?: string;
-    color?: string;
-    inStockCount?: number;
-    description?: string;
-  };
-
-  const HotProducts: Products[] = [
+  const DataHotProducts: Products[] = [
     {
       title: "Turbo X 90",
-      img: img1,
+      image: img1,
       price: 239.99,
       isSale: true,
       sale: { percent: "15%" },
@@ -44,7 +31,7 @@ const HotProducts = () => {
     },
     {
       title: "Aerosonic Pro",
-      img: img1,
+      image: img1,
       price: 199.99,
       isSale: false,
       sale: { percent: "New" },
@@ -57,7 +44,7 @@ const HotProducts = () => {
     },
     {
       title: "N&B Pro Racket 3000",
-      img: img1,
+      image: img1,
       price: 199.99,
       isSale: false,
       sale: { percent: "" },
@@ -70,7 +57,7 @@ const HotProducts = () => {
     },
     {
       title: "Court Master Pro",
-      img: img1,
+      image: img1,
       price: 199.99,
       isSale: false,
       sale: { percent: "10%" },
@@ -157,28 +144,9 @@ const HotProducts = () => {
             </div>
           </div>
           <div className="grid grid-cols-2 gap-4">
-            {HotProducts.map((hotProduct, index) => {
-              const mappedProduct = {
-                title: hotProduct.title,
-                image: hotProduct.img,
-                price: hotProduct.price,
-                rating: hotProduct.rating,
-                reviews: hotProduct.countRating,
-                inStockCount: hotProduct.inStockCount || 0,
-                company: hotProduct.company || "",
-                color: hotProduct.color || "",
-                description: hotProduct.description || "",
-                type: {
-                  isSale: hotProduct.isSale,
-                  salePercent: hotProduct.sale.percent,
-                },
-              };
+            {DataHotProducts.map((data, index) => {
               return (
-                <ProductCard
-                  product={mappedProduct}
-                  variant="minimal"
-                  key={index}
-                />
+                <ProductCard product={data} variant="minimal" key={index} />
               );
             })}
           </div>
