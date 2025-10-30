@@ -4,21 +4,24 @@ import HomePage from "./HomePage/HomePage";
 import ProductsPage from "./ProductsPage/ProductsPage";
 import Footer from "./Components/Footer";
 import ProductItem from "./ProductsPage/ProductItem";
-import { Navigate } from "react-router-dom";
+import ScrollToTop from "./Components/ScrollToTop";
+import BackToTopButton from "./Components/BackToTop";
+import CheckOut from "./Components/CheckOut";
+// import Cart from "./Cart/Cart";
 const App = () => {
   return (
     <div className="App">
       <Header />
+      <ScrollToTop />
       <Routes>
         <Route path="/" element={<HomePage />} />
-        <Route path="/ProductsPage" element={<ProductsPage />} />
-        <Route path="/product/:slug" element={<ProductItem />} />
-        <Route
-          path="/ProductItem"
-          element={<Navigate to="/ProductsPage" replace />}
-        />
+        <Route path="/products-page" element={<ProductsPage />} />
+        {/* <Route path="/cart-page" element={<Cart />} /> */}
+        <Route path="/checkout" element={<CheckOut />} />
+        <Route path="/products-page/product/:id" element={<ProductItem />} />
       </Routes>
       <Footer />
+      <BackToTopButton />
     </div>
   );
 };

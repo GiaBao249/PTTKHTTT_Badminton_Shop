@@ -1,7 +1,11 @@
-import { useLocation, useParams, Navigate } from "react-router-dom";
-import type { Products } from "../types/ProductTypes/ProductType";
 import {
-  Star,
+  useLocation,
+  useParams,
+  Navigate,
+  useNavigate,
+} from "react-router-dom";
+import { type Products } from "../types/ProductTypes/ProductType";
+import {
   Plus,
   Minus,
   Heart,
@@ -11,26 +15,89 @@ import {
   Shield,
   RefreshCcw,
   X,
+  ArrowLeft,
 } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import FullDescription from "../Components/FullDescription";
 import Specification from "../Components/Specification";
 import Review from "../Components/Review";
 import { StarRating } from "../Components/RatingStar";
+
 const ProductItem = () => {
-  const { slug } = useParams<{ slug: string }>();
   const location = useLocation();
+  const navigate = useNavigate();
+  const { id } = useParams();
   const [countProduct, setCountProduct] = useState(0);
   const [isZoomed, setIsZoomed] = useState(false);
   const [activeTab, setActiveTab] = useState<
     "description" | "specifications" | "review"
   >("description");
-  const product =
+  const [product, setProduct] = useState<Products | null>(
     (location.state as Products | undefined) ??
-    (location.state as { product?: Products } | undefined)?.product;
+      (location.state as { product?: Products } | undefined)?.product ??
+      null
+  );
+  const [loading, setLoading] = useState(!product);
+
+  const formatVND = (v: number) =>
+    new Intl.NumberFormat("vi-VN", {
+      style: "currency",
+      currency: "VND",
+    }).format(v);
+
+  const handleBack = () => {
+    navigate(-1);
+  };
+
+  useEffect(() => {
+    if (!product && id) {
+      setLoading(true);
+      fetch(`${import.meta.env.VITE_API_URL}/api/products/${id}`)
+        .then((res) => {
+          if (!res.ok) throw new Error(`HTTP ${res.status}`);
+          return res.json();
+        })
+        .then((data) => {
+          const mapped: Products = {
+            id: data.product_id,
+            title: data.product_name,
+            price: data.price,
+            description: data.description ?? "",
+            category: data.category?.category_name ?? "",
+            image: data.items?.[0]?.images?.[0]?.image_filename ?? "",
+            inStockCount:
+              data.items?.reduce(
+                (sum: number, item: any) => sum + (item.quantity || 0),
+                0
+              ) ?? 0,
+            isSale: false,
+            rating: 0,
+            countRating: 0,
+            company: "",
+            color: "",
+          };
+          setProduct(mapped);
+        })
+        .catch((err) => {
+          console.error("Error loading product:", err);
+        })
+        .finally(() => {
+          setLoading(false);
+        });
+    }
+  }, [id, product]);
+
+  if (loading) {
+    return (
+      <section className="py-6 md:py-8">
+        <div className="mx-auto max-w-7xl px-4 md:px-6 lg:px-8">
+          <p className="text-center text-gray-600">Đang tải sản phẩm...</p>
+        </div>
+      </section>
+    );
+  }
 
   if (!product) {
-    // TODO: fetch theo slug nếu có dữ liệu/ API
     return <Navigate to="/ProductsPage" replace />;
   }
 
@@ -38,7 +105,7 @@ const ProductItem = () => {
     const next = (prev: number) => Math.min(prev + 1, product.inStockCount);
     setCountProduct(next);
   };
-  const handleDescreaseProduct = () => {
+  const handleDecreaseProduct = () => {
     const prev = (prev: number) => Math.max(prev - 1, 0);
     setCountProduct(prev);
   };
@@ -46,6 +113,14 @@ const ProductItem = () => {
   return (
     <section className="py-6 md:py-8">
       <div className="mx-auto max-w-7xl px-4 md:px-6 lg:px-8">
+        <button
+          onClick={handleBack}
+          className="mb-6 flex items-center gap-2 text-gray-600 hover:text-black transition-colors"
+        >
+          <ArrowLeft size={20} />
+          <span className="font-medium">Quay lại</span>
+        </button>
+
         <div className="grid grid-cols-2 space-x-6">
           <img
             src={product.image}
@@ -75,9 +150,8 @@ const ProductItem = () => {
           <div className="flex flex-col justify-start gap-6">
             <div className="flex flex-row gap-2">
               <h3 className="font-bold text-md text-black">
-                {product.company}
+                {product.category}
               </h3>
-              <p> • </p>
               <h3 className="text-md text-gray-700"> {product.color}</h3>
             </div>
             <div className="text-4xl font-bold">{product.title}</div>
@@ -88,38 +162,37 @@ const ProductItem = () => {
             </div>
             <div className="flex flex-row justify-start gap-4 items-end">
               <h2 className="font-bold text-3xl">
-                $
                 {product.isSale
-                  ? (
+                  ? formatVND(
                       product.price -
-                      (product.price *
-                        (product.percent ? product.percent : 0)) /
-                        100
-                    ).toFixed(2)
-                  : product.price.toFixed(2)}
+                        (product.price *
+                          (product.percent ? product.percent : 0)) /
+                          100
+                    )
+                  : formatVND(product.price)}
               </h2>
               <h3 className="text-2xl line-through">
-                {product.isSale ? `$${product.price}` : ""}
+                {product.isSale ? formatVND(product.price) : ""}
               </h3>
               <h3 className="text-lg font-bold">
-                {product.isSale ? `Save ${product.percent}%` : ""}
+                {product.isSale ? `Giảm ${product.percent}%` : ""}
               </h3>
             </div>
             <div>
               {product.inStockCount > 0 ? (
                 <p className="font-sans text-green-600 text-lg">
-                  In Stock ({product.inStockCount} available)
+                  Còn hàng ({product.inStockCount} sản phẩm)
                 </p>
               ) : (
-                <p className="font-sans text-red-600 text-lg">Out of Stock</p>
+                <p className="font-sans text-red-600 text-lg">Hết hàng</p>
               )}
             </div>
             <p className="text-lg">{product.description}</p>
             <div className="flex flex-row gap-6 items-center">
-              <p className="font-bold text-lg">Quantity:</p>
+              <p className="font-bold text-lg">Số lượng:</p>
               <div className="flex flex-row gap-6 items-center">
                 <button
-                  onClick={() => handleDescreaseProduct()}
+                  onClick={() => handleDecreaseProduct()}
                   className={`rounded-lg shadow-sm border p-2 ${
                     countProduct === 0
                       ? "cursor-not-allowed bg-gray-50"
@@ -153,7 +226,7 @@ const ProductItem = () => {
                   }`}
                 >
                   <ShoppingCart size={22} />
-                  <span>Add To Cart</span>
+                  <span>Thêm vào giỏ</span>
                 </button>
               </div>
               <button className="rounded-lg shadow-sm border border-black/20 hover:shadow-md hover:scale-110 transition-all duration-300 p-2">
@@ -166,20 +239,30 @@ const ProductItem = () => {
             <div className="flex flex-row justify-between gap-3 mt-8">
               <div className="flex flex-col items-center">
                 <Truck size={28} />
-                <p className="text-black font-bold text-lg">Free Shipping</p>
-                <p className="text-gray-700 text-lg">On orders over 0.5$</p>
-              </div>
-              <div className="flex flex-col items-center">
-                <Shield size={28} />
-                <p className="text-black font-bold text-lg">
-                  Authentic Guarantee
+                <p className="text-black font-bold text-lg text-center">
+                  Miễn phí vận chuyển
                 </p>
-                <p className="text-gray-700 text-lg">100% genuine products</p>
+                <p className="text-gray-700 text-lg text-center">
+                  Áp dụng cho đơn từ 350.000đ
+                </p>
+              </div>
+              <div className="flex flex-col items-center text-center">
+                <Shield size={28} />
+                <p className="text-black font-bold text-lg text-center">
+                  Cam kết chính hãng
+                </p>
+                <p className="text-gray-700 text-lg">
+                  Sản phẩm 100% chính hãng
+                </p>
               </div>
               <div className="flex flex-col items-center">
                 <RefreshCcw size={28} />
-                <p className="text-black font-bold text-lg">30-Day Returns</p>
-                <p className="text-gray-700 text-lg">Easy return policy</p>
+                <p className="text-black font-bold text-lg text-center">
+                  Đổi trả 30 ngày
+                </p>
+                <p className="text-gray-700 text-lg text-center">
+                  Chính sách đổi trả dễ dàng
+                </p>
               </div>
             </div>
           </div>
@@ -193,7 +276,7 @@ const ProductItem = () => {
                 : "border-black/20 hover:border-blue-300"
             }`}
           >
-            Full Description
+            Mô tả chi tiết
           </button>
           <button
             onClick={() => setActiveTab("specifications")}
@@ -203,7 +286,7 @@ const ProductItem = () => {
                 : "border-black/20 hover:border-blue-300"
             }`}
           >
-            Specifications
+            Thông số kỹ thuật
           </button>
           <button
             onClick={() => setActiveTab("review")}
@@ -213,7 +296,7 @@ const ProductItem = () => {
                 : "border-black/20 hover:border-blue-300"
             }`}
           >
-            Review ({product.countRating})
+            Đánh giá ({product.countRating})
           </button>
         </div>
         <div className="mt-8 p-6 min-h-[200px]">

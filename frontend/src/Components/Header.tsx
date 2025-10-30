@@ -4,6 +4,10 @@ import { Link } from "react-router-dom";
 
 const Header = () => {
   const [isProductsOpen, setIsProductsOpen] = useState(false);
+  const handleSetIsProductOpen = () => {
+    setIsProductsOpen(false);
+    // window.scrollTo({ top: 0, behavior: "smooth" });
+  };
   return (
     <header className="sticky top-0 z-50 bg-white border-b border-black/10">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
@@ -23,14 +27,14 @@ const Header = () => {
                   to="/"
                   className="text-gray-700 hover:text-black transition-colors"
                 >
-                  Home
+                  Trang chủ
                 </Link>
                 <div className="relative">
                   <button
                     onClick={() => setIsProductsOpen(!isProductsOpen)}
                     className="flex items-center gap-1 text-gray-700 hover:text-black"
                   >
-                    Product
+                    Sản phẩm
                     <ChevronDown
                       size={16}
                       className={`transition-transform ${
@@ -41,46 +45,46 @@ const Header = () => {
                   {isProductsOpen && (
                     <div className="absolute top-full text-left left-0 mt-2 w-48 bg-white border border-black/10 rounded-lg shadow-lg py-2 z-50">
                       <Link
-                        to="/ProductsPage?category=all"
+                        to="/products-page?category=all"
                         className="block px-4 py-2 text-gray-700 hover:bg-black/10 transition-colors"
-                        onClick={() => setIsProductsOpen(false)}
+                        onClick={() => handleSetIsProductOpen()}
                       >
-                        All Products
+                        TẤT CẢ SẢN PHẨM
                       </Link>
                       <Link
-                        to="/ProductsPage?category=rackets"
-                        onClick={() => setIsProductsOpen(false)}
+                        to="/products-page?category=rackets"
+                        onClick={() => handleSetIsProductOpen()}
                         className="block px-4 py-2 text-gray-700 hover:bg-black/10 transition-colors"
                       >
-                        Rackets
+                        VỢT CẦU LÔNG
                       </Link>
                       <Link
-                        to="/ProductsPage?category=shoes"
-                        onClick={() => setIsProductsOpen(false)}
+                        to="/products-page?category=clothes"
+                        onClick={() => handleSetIsProductOpen()}
                         className="block px-4 py-2 text-gray-700 hover:bg-black/10 transition-colors"
                       >
-                        Shoes
+                        ÁO THỂ THAO
                       </Link>
                       <Link
-                        to="/ProductsPage?category=shuttlecocks"
-                        onClick={() => setIsProductsOpen(false)}
+                        to="/products-page?category=shoes"
+                        onClick={() => handleSetIsProductOpen()}
                         className="block px-4 py-2 text-gray-700 hover:bg-black/10 transition-colors"
                       >
-                        Shuttlecocks
+                        GIÀY CẦU LÔNG
                       </Link>
                       <Link
-                        to="/ProductsPage?category=strings"
+                        to="/products-page?category=shuttlecocks"
+                        onClick={() => handleSetIsProductOpen()}
                         className="block px-4 py-2 text-gray-700 hover:bg-black/10 transition-colors"
-                        onClick={() => setIsProductsOpen(false)}
                       >
-                        Strings
+                        QUẢ CẦU
                       </Link>
                       <Link
-                        to="/ProductsPage?category=accessories"
-                        onClick={() => setIsProductsOpen(false)}
+                        to="/products-page?category=accessories"
+                        onClick={() => handleSetIsProductOpen()}
                         className="block px-4 py-2 text-gray-700 hover:bg-black/10 transition-colors"
                       >
-                        Accessories
+                        PHỤ KIỆN CẦU LÔNG
                       </Link>
                     </div>
                   )}
@@ -89,13 +93,13 @@ const Header = () => {
                   href="#"
                   className="text-gray-700 hover:text-black transition-colors"
                 >
-                  Contact
+                  Liên hệ
                 </a>
                 <a
                   href="#"
                   className="text-gray-700 hover:text-black transition-colors"
                 >
-                  Sale
+                  Khuyến mãi
                 </a>
               </nav>
 
@@ -107,7 +111,7 @@ const Header = () => {
                 />
                 <input
                   type="search"
-                  placeholder="Search products..."
+                  placeholder="Tìm kiếm sản phẩm..."
                   className="w-full h-10 pl-10 pr-4 rounded-xl border border-black/10 bg-white text-gray-900 placeholder:text-gray-500 shadow-sm focus:outline-none focus:ring-2 focus:ring-black/10"
                 />
               </div>
@@ -126,12 +130,14 @@ const Header = () => {
             >
               <User size={20} />
             </button>
-            <button
-              aria-label="Cart"
-              className="p-2 rounded-full hover:bg-black/5 text-gray-700 transition-colors"
-            >
-              <ShoppingCart size={20} />
-            </button>
+            <Link to="/cart-page">
+              <button
+                aria-label="Cart"
+                className="p-2 rounded-full hover:bg-black/5 text-gray-700 transition-colors"
+              >
+                <ShoppingCart size={20} />
+              </button>
+            </Link>
           </div>
         </div>
       </div>

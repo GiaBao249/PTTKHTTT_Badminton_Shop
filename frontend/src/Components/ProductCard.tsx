@@ -1,4 +1,4 @@
-import { ShoppingCart, Star } from "lucide-react";
+import { ShoppingCart, Star, Trash2, Plus, Minus } from "lucide-react";
 import type {
   Products,
   ProductCardVariant,
@@ -6,9 +6,86 @@ import type {
 type ProductCardProps = {
   product: Products;
   variant?: ProductCardVariant;
+  quantity?: number;
+  onIncrease?: () => void;
+  onDecrease?: () => void;
+  onRemove?: () => void;
 };
-const ProductCard = ({ product, variant = "default" }: ProductCardProps) => {
+const ProductCard = ({
+  product,
+  variant = "default",
+  quantity = 1,
+  onIncrease,
+  onDecrease,
+  onRemove,
+}: ProductCardProps) => {
+  const formatVND = (value: number) =>
+    new Intl.NumberFormat("vi-VN", {
+      style: "currency",
+      currency: "VND",
+    }).format(value);
   const isList = variant === "list";
+  const isCart = variant === "cart";
+  if (isCart) {
+    return (
+      <div className="flex flex-row gap-4 mt-4">
+        <img
+          src={product.image}
+          alt=""
+          className="rounded-lg w-28 h-full object-cover shrink-0"
+        />
+        <div className="flex flex-col flex-1">
+          <div className="flex flex-row justify-between items-center">
+            <p className="text-xl font-bold">{product.title}</p>
+            <button
+              onClick={onRemove}
+              className="hover:scale-110 transition-opacity text-gray-700 hover:text-red-600"
+            >
+              <Trash2 size={20} />
+            </button>
+          </div>
+          <div className="flex flex-col gap-2 mt-1">
+            <p className="text-[14px] text-gray-700">{product.category}</p>
+            <div className="flex flex-row justify-between items-center">
+              <div className="flex flex-row gap-5 items-center">
+                <button
+                  onClick={onDecrease}
+                  className={`rounded-lg shadow-sm border p-1.5 ${
+                    quantity === 1
+                      ? "cursor-not-allowed bg-gray-50"
+                      : "cursor-pointer border-black/20 hover:shadow-md hover:scale-110 transition-all duration-300"
+                  }`}
+                  disabled={quantity === 1}
+                >
+                  <Minus size={18} />
+                </button>
+                <p className="font-medium text-md">{quantity}</p>
+                <button
+                  onClick={onIncrease}
+                  className={`rounded-lg shadow-sm border p-1.5 ${
+                    quantity === product.inStockCount
+                      ? "cursor-not-allowed bg-gray-50"
+                      : "cursor-pointer border-black/20 hover:shadow-md hover:scale-110 transition-all duration-300 "
+                  }`}
+                  disabled={quantity === product.inStockCount}
+                >
+                  <Plus size={18} />
+                </button>
+              </div>
+              <div className="">
+                <p className="text-xl font-bold">
+                  {formatVND(product.price * quantity)}
+                </p>
+                <p className=" flex flex-row-reverse text-[12px] font-normal">
+                  {formatVND(product.price)} mỗi cái
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
   return (
     <div
       className={
@@ -35,11 +112,11 @@ const ProductCard = ({ product, variant = "default" }: ProductCardProps) => {
         />
         <p className="absolute top-2 left-2 md:left-3 font-bold text-black text-xs md:text-sm">
           {product.isSale
-            ? `${product.percent}% OFF`
+            ? `${product.percent}% GIẢM`
             : product.isBestSeller
-            ? "Best Seller"
+            ? "Bán chạy"
             : product.isNew
-            ? "New"
+            ? "Mới"
             : null}
         </p>
       </div>
@@ -48,15 +125,9 @@ const ProductCard = ({ product, variant = "default" }: ProductCardProps) => {
         className={
           isList
             ? "flex-1 flex flex-col gap-2"
-            : "flex flex-col gap-3 px-2 py-4"
+            : "flex flex-col gap-3 px-2 py-3"
         }
       >
-        {!isList && (
-          <p className="font-sans text-gray-700 text-xs">
-            {product.company} • {product.color}
-          </p>
-        )}
-
         <p
           className={
             isList
@@ -66,13 +137,18 @@ const ProductCard = ({ product, variant = "default" }: ProductCardProps) => {
         >
           {product.title}
         </p>
+        {!isList && (
+          <p className="font-sans text-gray-700 text-[14px]">
+            {product.category}
+          </p>
+        )}
 
         {isList ? (
           <>
-            <p className="text-sm text-gray-300 md:text-gray-400">
-              {product.company} • {product.color}
+            <p className="text-sm text-gray-300 md:text-gray-700">
+              {product.category}
             </p>
-            <p className="text-sm text-gray-200 md:text-gray-400">
+            <p className="text-sm text-gray-200 md:text-gray-700">
               {product.description}
             </p>
             {(product.balance || product.material || product.stringTension) && (
@@ -112,14 +188,26 @@ const ProductCard = ({ product, variant = "default" }: ProductCardProps) => {
                 isList ? "font-extrabold text-2xl" : "font-bold text-2xl"
               }
             >
-              ${product.price}
+              {formatVND(product.price)}
             </p>
             {product.isSale && (
               <p className="text-sm line-through text-gray-500">
-                ${product.price}
+                {formatVND(product.price)}
               </p>
             )}
           </div>
+
+          {isList && (
+            <p
+              className={`text-xs ${
+                product.inStockCount > 0 ? "text-green-600" : "text-red-600"
+              }`}
+            >
+              {product.inStockCount > 0
+                ? `Còn hàng (${product.inStockCount} sản phẩm)`
+                : "Hết hàng"}
+            </p>
+          )}
 
           <button
             className={
@@ -129,8 +217,12 @@ const ProductCard = ({ product, variant = "default" }: ProductCardProps) => {
             }
             aria-label="Add to cart"
           >
-            <ShoppingCart size={isList ? 18 : 20} />
-            {isList && <span>Add to Cart</span>}
+            {isList && (
+              <div className="flex flex-row gap-3">
+                <ShoppingCart size={isList ? 18 : 20} />
+                <span>Thêm vào giỏ</span>
+              </div>
+            )}
           </button>
         </div>
 
@@ -139,10 +231,10 @@ const ProductCard = ({ product, variant = "default" }: ProductCardProps) => {
             <div>
               {product.inStockCount > 0 ? (
                 <p className="font-sans text-green-600 text-xs">
-                  In Stock ({product.inStockCount} available)
+                  Còn hàng ({product.inStockCount} sản phẩm)
                 </p>
               ) : (
-                <p className="font-sans text-red-600 text-xs">Out of Stock</p>
+                <p className="font-sans text-red-600 text-xs">Hết hàng</p>
               )}
             </div>
             <button
@@ -155,7 +247,7 @@ const ProductCard = ({ product, variant = "default" }: ProductCardProps) => {
             >
               <div className="flex items-center justify-center gap-2">
                 <ShoppingCart size={18} />
-                Add to Cart
+                Thêm vào giỏ
               </div>
             </button>
           </>

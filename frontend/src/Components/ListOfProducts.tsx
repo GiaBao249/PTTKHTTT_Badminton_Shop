@@ -1,148 +1,112 @@
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { ChevronLeft, ChevronRight, Columns3, List } from "lucide-react";
 import ProductCard from "./ProductCard";
-import type { Products } from "../types/ProductTypes/ProductType";
-import img1 from "../assets/c2.jpg";
 import DropdownSelect from "./DropDownSelect";
 import { Link } from "react-router-dom";
-const ListOfProducts = () => {
-  const [selectedFilter, setSelectedFilter] = useState<string>("Relevance");
-  const [selectedPerPage, setSelectedPerPage] = useState<string>("6 per Page");
+import { useSearchParams } from "react-router-dom";
+import type {
+  ProductListItem,
+  Products,
+} from "../types/ProductTypes/ProductType";
+import { toUIProduct } from "../utils/productMapper";
+import { animateScrollToTop } from "../utils/scroll/animateScrollToTop";
+const API_BASE = import.meta.env.VITE_API_URL;
+type Props = { selectedOptionIds?: number[]; categoryId?: number | undefined };
+const ListOfProducts = ({ selectedOptionIds = [], categoryId }: Props) => {
+  const [selectedFilter, setSelectedFilter] = useState<string>("Liên quan");
+  const [selectedPerPage, setSelectedPerPage] =
+    useState<string>("6sp mỗi trang");
   const [isGridView, setIsGridView] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
   const dataFilterButton: string[] = [
-    "Relevance",
-    "Price: Low to high",
-    "Price: High to low",
-    "Popularity",
-    "Rating",
+    "Liên quan",
+    "Giá: Thấp đến cao",
+    "Giá: Cao đến thấp",
+    "Phổ biến",
+    "Đánh giá",
   ];
   const dataPerPageButton: string[] = [
-    "6 per Page",
-    "9 per Page",
-    "12 per Page",
+    "6sp mỗi trang",
+    "9sp mỗi trang",
+    "12sp mỗi trang",
   ];
+
+  const [searchParams] = useSearchParams();
+  const category = searchParams.get("category") || "all";
 
   const handleView = (isGridView: boolean) => {
     setIsGridView(isGridView);
   };
 
-  const ProductData: Products[] = [
-    {
-      id: 1,
-      title: "Turbo X 90",
-      image: img1,
-      price: 239.99,
-      isSale: true,
-      percent: 15,
-      rating: 4.6,
-      countRating: 120,
-      company: "Li-Ning",
-      color: "Sold 654",
-      inStockCount: 12,
-      description: "Speed and agility for the quick player.",
-    },
-    {
-      id: 2,
-      title: "Turbo X 90",
-      image: img1,
-      price: 239.99,
-      isSale: true,
-      percent: 12,
-      rating: 4.6,
-      countRating: 120,
-      company: "Li-Ning",
-      color: "Sold 654",
-      inStockCount: 12,
-      description: "Speed and agility for the quick player.",
-    },
-    {
-      id: 3,
-      title: "Turbo X 90",
-      image: img1,
-      price: 239.99,
-      isSale: true,
-      percent: 12,
-      rating: 4.6,
-      countRating: 120,
-      company: "Li-Ning",
-      color: "Sold 654",
-      inStockCount: 12,
-      description: "Speed and agility for the quick player.",
-    },
-    {
-      id: 4,
-      title: "Turbo X 90",
-      image: img1,
-      price: 239.99,
-      isSale: true,
-      percent: 18,
-      rating: 4.6,
-      countRating: 120,
-      company: "Li-Ning",
-      color: "Sold 654",
-      inStockCount: 12,
-      description: "Speed and agility for the quick player.",
-    },
-    {
-      id: 5,
-      title: "Aerosonic Pro",
-      image: img1,
-      price: 199.99,
-      isSale: false,
-      percent: 0,
-      isNew: true,
-      rating: 4.8,
-      countRating: 85,
-      company: "Yonex",
-      color: "Sold 430",
-      inStockCount: 8,
-      description: "Aerodynamic design for speed.",
-    },
-    {
-      id: 6,
-      title: "N&B Pro Racket 3000",
-      image: img1,
-      price: 199.99,
-      isSale: false,
-      percent: 0,
-      rating: 4.8,
-      countRating: 85,
-      company: "N&B",
-      color: "Sold 220",
-      inStockCount: 5,
-      description: "Premium performance racket.",
-    },
-    {
-      id: 7,
-      title: "Court Master Pro",
-      image: img1,
-      price: 199.99,
-      isSale: false,
-      isNew: true,
-      rating: 4.8,
-      countRating: 85,
-      company: "Victor",
-      color: "Sold 350",
-      inStockCount: 10,
-      description: "Versatile racket for all players.",
-    },
-  ];
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [products, setProducts] = useState<ProductListItem[]>([]);
+
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        if (!selectedOptionIds || selectedOptionIds.length === 0) {
+          const url =
+            categoryId != null
+              ? `${API_BASE}/api/products/category/${categoryId}`
+              : `${API_BASE}/api/products`;
+          const res = await fetch(url);
+          if (!res.ok) {
+            throw Error(`HTTP ${res.status}`);
+          }
+          const data: ProductListItem[] = await res.json();
+          setProducts(data);
+        } else {
+          const res = await fetch(`${API_BASE}/api/products/filter`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              optionIds: selectedOptionIds,
+              categoryId: categoryId,
+            }),
+          });
+          if (!res.ok) {
+            throw Error(`HTTP ${res.status}`);
+          }
+          const data: ProductListItem[] = await res.json();
+          setProducts(data);
+        }
+        setCurrentPage(1);
+      } catch (e: any) {
+        setError(e.message || "Fetch failed");
+      } finally {
+        setLoading(false);
+      }
+    };
+    loadData();
+  }, [selectedOptionIds, categoryId]);
+
+  const uiList: Products[] = useMemo(
+    () => products.map(toUIProduct),
+    [products]
+  );
 
   const itemsPerPage = parseInt(selectedPerPage.split(" ")[0]);
-  const totalPages = Math.ceil(ProductData.length / itemsPerPage);
+  const sorted = useMemo(() => {
+    switch (selectedFilter) {
+      case "Giá: Thấp đến cao":
+        return [...uiList].sort((a, b) => a.price - b.price);
+      case "Giá: Cao đến thấp":
+        return [...uiList].sort((a, b) => b.price - a.price);
+      default:
+        return uiList;
+    }
+  }, [uiList, selectedFilter]);
+  const totalPages = Math.ceil(sorted.length / itemsPerPage);
   const startIndex = (currentPage - 1) * itemsPerPage;
   const endIndex = startIndex + itemsPerPage;
-  const currentProducts = ProductData.slice(startIndex, endIndex);
+  const currentProducts = sorted.slice(startIndex, endIndex);
   const handleFilterSelect = (filter: string) => {
     setSelectedFilter(filter);
   };
-  const toSlug = (s: string) =>
-    s
-      .toLowerCase()
-      .trim()
-      .replace(/\s+/g, "-")
-      .replace(/[^a-z0-9-]/g, "");
+
   const handlePerPageSelect = (perPage: string) => {
     setSelectedPerPage(perPage);
     setCurrentPage(1);
@@ -150,7 +114,7 @@ const ListOfProducts = () => {
   const handlePageChange = (pageNumber: number) => {
     const next = Math.min(Math.max(pageNumber, 1), totalPages);
     setCurrentPage(next);
-    window.scrollTo({ top: 0, behavior: "smooth" });
+    animateScrollToTop(window, 700);
   };
 
   return (
@@ -167,7 +131,7 @@ const ListOfProducts = () => {
             options={dataPerPageButton}
             selectedOption={selectedPerPage}
             onOptionSelect={handlePerPageSelect}
-            width="w-[130px]"
+            width="w-[150px]"
           />
         </div>
         <div className="flex flex-row gap-4 mt-1">
@@ -193,10 +157,9 @@ const ListOfProducts = () => {
         } gap-4`}
       >
         {currentProducts.map((product, index) => {
-          const slug = toSlug(product.title);
           return (
             <Link
-              to={`/product/${slug}`}
+              to={`/products-page/product/${product.id}`}
               state={product}
               key={product.id}
               className={isGridView ? "" : "w-full"}
@@ -244,8 +207,8 @@ const ListOfProducts = () => {
         </div>
       )}
       <div className="text-center text-sm text-gray-600">
-        Showing {startIndex + 1}-{Math.min(endIndex, ProductData.length)} of{" "}
-        {ProductData.length} products
+        Hiển thị {startIndex + 1}-{Math.min(endIndex, sorted.length)} trên tổng{" "}
+        {sorted.length} sản phẩm
       </div>
     </div>
   );
