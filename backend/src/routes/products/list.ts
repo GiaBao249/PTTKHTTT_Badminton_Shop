@@ -80,7 +80,7 @@ export function registerListRoutes(router: Router) {
       if (product.length === 0) return res.json([]);
 
       const productIds = product.map((p: any) => p.product_id);
-      console.log(productIds);
+      // console.log(productIds);
       const { data: items, error: itemsError } = await supabase
         .from("product_item")
         .select(

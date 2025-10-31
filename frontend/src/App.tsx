@@ -7,6 +7,8 @@ import ProductItem from "./ProductsPage/ProductItem";
 import ScrollToTop from "./Components/ScrollToTop";
 import BackToTopButton from "./Components/BackToTop";
 import CheckOut from "./Components/CheckOut";
+import LoginForm from "./Auth/LoginForm";
+import RegisterForm from "./Auth/RegisterForm";
 // import Cart from "./Cart/Cart";
 const App = () => {
   return (
@@ -18,6 +20,8 @@ const App = () => {
         <Route path="/products-page" element={<ProductsPage />} />
         {/* <Route path="/cart-page" element={<Cart />} /> */}
         <Route path="/checkout" element={<CheckOut />} />
+        <Route path="/login" element={<LoginForm />} />
+        <Route path="/register" element={<RegisterForm />} />
         <Route path="/products-page/product/:id" element={<ProductItem />} />
       </Routes>
       <Footer />

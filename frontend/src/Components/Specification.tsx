@@ -15,7 +15,7 @@ const Specification = ({ product }: { product: Products }) => {
       const response = await fetch(
         `${API_BASE}/api/products/${product.id}/specification`
       );
-      console.log(product.id);
+      // console.log(product.id);
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
       const data: PairItemSpecification[] = await response.json();
       setSpecification(data ?? []);
