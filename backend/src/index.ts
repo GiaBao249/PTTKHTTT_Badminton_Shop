@@ -1,5 +1,6 @@
 import express from "express";
 import productRoutes from "./routes/products";
+import authRoutes from "./routes/auth";
 import cors from "cors";
 const app = express();
 
@@ -11,7 +12,7 @@ app.use(
 );
 app.use(express.json());
 app.use("/api/products", productRoutes);
-
+app.use("/api/auth", authRoutes);
 app.listen(3000, () => {
   console.log("Server is running on port 3000");
 });
