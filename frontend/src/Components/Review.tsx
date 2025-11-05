@@ -14,7 +14,6 @@ const Review = ({ product }: { product: Products }) => {
     if (!text) return;
     setSubmitting(true);
     try {
-      // TODO: call API gửi phản hồi
       await new Promise((r) => setTimeout(r, 800));
       setReply("");
       setShowReply(false);

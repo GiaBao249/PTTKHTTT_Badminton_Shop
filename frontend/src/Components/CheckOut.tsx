@@ -43,14 +43,12 @@ const CheckOut = () => {
   >("standard");
   const [paymentMethod, setPaymentMethod] = useState<"cod" | "card">("cod");
 
-  // Định dạng VND
   const formatVND = (v: number) =>
     new Intl.NumberFormat("vi-VN", {
       style: "currency",
       currency: "VND",
     }).format(v);
 
-  // Phí vận chuyển theo VND
   const shippingCost =
     shippingMethod === "freeShip"
       ? 0

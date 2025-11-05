@@ -3,8 +3,9 @@ import ProductCard from "./ProductCard";
 import { MoveRight } from "lucide-react";
 import type { ProductListItem } from "../types/ProductTypes/ProductType";
 import { toUIProduct } from "../utils/productMapper";
-import { Link } from "react-router-dom";
-
+import { Link, useNavigate } from "react-router-dom";
+import { cartService } from "../services/cartService";
+import { useAuth } from "../contexts/AuthContext";
 const API_BASE = import.meta.env.VITE_API_URL;
 
 type Description = {
@@ -21,6 +22,8 @@ type TopProductsResponse = {
 };
 
 const HotProducts = () => {
+  const { user, token } = useAuth();
+  const navigate = useNavigate();
   const [selectedDescription, setSelectedDescription] = useState<Description>({
     title: "Vợt cầu lông",
     des: "Khám phá bộ sưu tập vợt cao cấp, hiệu năng vượt trội cho nhà vô địch.",
@@ -164,7 +167,41 @@ const HotProducts = () => {
                     state={product}
                     key={product.id}
                   >
-                    <ProductCard product={product} variant="minimal" />
+                    <ProductCard
+                      product={product}
+                      variant="minimal"
+                      onAddToCart={async () => {
+                        if (!token) {
+                          alert("Vui lòng đăng nhập trước khi mua hàng");
+                          navigate("/login");
+                          return;
+                        }
+
+                        try {
+                          const res = await fetch(
+                            `${API_BASE}/api/products/${product.id}`
+                          );
+                          if (!res.ok) {
+                            throw new Error("Không thể lấy thông tin sản phẩm");
+                          }
+                          const data = await res.json();
+                          if (!data.items || data.items.length === 0) {
+                            alert("Sản phẩm không có phiên bản nào");
+                            return;
+                          }
+
+                          const product_item_id = data.items[0].product_item_id;
+                          await cartService.addItem(product_item_id, 1, token);
+                          alert("Đã thêm vào giỏ hàng");
+                        } catch (error) {
+                          alert(
+                            error instanceof Error
+                              ? error.message
+                              : "Lỗi khi thêm vào giỏ hàng"
+                          );
+                        }
+                      }}
+                    />
                   </Link>
                 );
               })

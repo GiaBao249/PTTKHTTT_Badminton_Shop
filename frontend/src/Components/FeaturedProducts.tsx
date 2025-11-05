@@ -1,18 +1,20 @@
 import ProductCard from "./ProductCard";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import type { ProductListItem } from "../types/ProductTypes/ProductType";
 import { useState } from "react";
 import { useEffect } from "react";
 import { toUIProduct } from "../utils/productMapper";
-
+import { useAuth } from "../contexts/AuthContext";
+import { cartService } from "../services/cartService";
 const API_BASE = import.meta.env.VITE_API_URL;
 const FeaturedProducts = () => {
   const [featuredProducts, setFeaturedProducts] = useState<ProductListItem[]>(
     []
   );
+  const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-
+  const { token } = useAuth();
   useEffect(() => {
     const fetchProducts = async () => {
       try {
@@ -60,7 +62,40 @@ const FeaturedProducts = () => {
                 state={toUIProduct(product)}
                 key={product.product_id}
               >
-                <ProductCard product={toUIProduct(product)} variant="default" />
+                <ProductCard
+                  product={toUIProduct(product)}
+                  variant="default"
+                  onAddToCart={async () => {
+                    if (!token) {
+                      alert("Vui lòng đăng nhập trước khi mua hàng");
+                      navigate("/login");
+                      return;
+                    }
+
+                    try {
+                      const res = await fetch(
+                        `${API_BASE}/api/products/${product.product_id}`
+                      );
+                      if (!res.ok) {
+                        throw new Error("Không thể lấy thông tin sản phẩm");
+                      }
+                      const data = await res.json();
+                      if (!data.items || data.items.length === 0) {
+                        alert("Sản phẩm không có phiên bản nào");
+                        return;
+                      }
+                      const product_item_id = data.items[0].product_item_id;
+                      await cartService.addItem(product_item_id, 1, token);
+                      alert("Đã thêm vào giỏ hàng");
+                    } catch (error) {
+                      alert(
+                        error instanceof Error
+                          ? error.message
+                          : "Lỗi khi thêm vào giỏ hàng"
+                      );
+                    }
+                  }}
+                />
               </Link>
             );
           })}
