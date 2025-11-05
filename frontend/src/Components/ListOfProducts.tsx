@@ -10,6 +10,8 @@ import type {
 } from "../types/ProductTypes/ProductType";
 import { toUIProduct } from "../utils/productMapper";
 import { animateScrollToTop } from "../utils/scroll/animateScrollToTop";
+import { cartService } from "../services/cartService";
+import { useAuth } from "../contexts/AuthContext";
 const API_BASE = import.meta.env.VITE_API_URL;
 type Props = { selectedOptionIds?: number[]; categoryId?: number | undefined };
 const ListOfProducts = ({ selectedOptionIds = [], categoryId }: Props) => {
@@ -37,11 +39,10 @@ const ListOfProducts = ({ selectedOptionIds = [], categoryId }: Props) => {
   const handleView = (isGridView: boolean) => {
     setIsGridView(isGridView);
   };
-
+  const { token } = useAuth();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [products, setProducts] = useState<ProductListItem[]>([]);
-
   useEffect(() => {
     const loadData = async () => {
       try {
@@ -168,6 +169,36 @@ const ListOfProducts = ({ selectedOptionIds = [], categoryId }: Props) => {
                 product={product}
                 variant={isGridView ? "default" : "list"}
                 key={index}
+                onAddToCart={async () => {
+                  if (!token) {
+                    alert("Vui lòng đăng nhập");
+                    return;
+                  }
+
+                  try {
+                    const res = await fetch(
+                      `${API_BASE}/api/products/${product.id}`
+                    );
+                    if (!res.ok) {
+                      throw new Error("Không thể lấy thông tin sản phẩm");
+                    }
+                    const data = await res.json();
+                    if (!data.items || data.items.length === 0) {
+                      alert("Sản phẩm không có phiên bản nào");
+                      return;
+                    }
+
+                    const product_item_id = data.items[0].product_item_id;
+                    await cartService.addItem(product_item_id, 1, token);
+                    alert("Đã thêm vào giỏ hàng");
+                  } catch (error) {
+                    alert(
+                      error instanceof Error
+                        ? error.message
+                        : "Lỗi khi thêm vào giỏ hàng"
+                    );
+                  }
+                }}
               />
             </Link>
           );

@@ -1,4 +1,5 @@
 import { ShoppingCart, Star, Trash2, Plus, Minus } from "lucide-react";
+import { useRef } from "react";
 import type {
   Products,
   ProductCardVariant,
@@ -7,18 +8,63 @@ type ProductCardProps = {
   product: Products;
   variant?: ProductCardVariant;
   quantity?: number;
+  product_item_id?: number;
   onIncrease?: () => void;
   onDecrease?: () => void;
   onRemove?: () => void;
+  onAddToCart?: () => void;
 };
 const ProductCard = ({
   product,
   variant = "default",
+  product_item_id,
   quantity = 1,
   onIncrease,
   onDecrease,
   onRemove,
+  onAddToCart,
 }: ProductCardProps) => {
+  const imgRef = useRef<HTMLImageElement | null>(null);
+  const flyToCart = () => {
+    try {
+      const source = imgRef.current;
+      const target = document.getElementById("cart-icon");
+      if (!source || !target) return;
+      const s = source.getBoundingClientRect();
+      const t = target.getBoundingClientRect();
+      const clone = source.cloneNode(true) as HTMLImageElement;
+      clone.style.position = "fixed";
+      clone.style.left = `${s.left}px`;
+      clone.style.top = `${s.top}px`;
+      clone.style.width = `${s.width}px`;
+      clone.style.height = `${s.height}px`;
+      clone.style.zIndex = "9999";
+      clone.style.borderRadius = "8px";
+      clone.style.pointerEvents = "none";
+      document.body.appendChild(clone);
+
+      const translateX = t.left + t.width / 2 - (s.left + s.width / 2);
+      const translateY = t.top + t.height / 2 - (s.top + s.height / 2);
+
+      clone.animate(
+        [
+          { transform: "translate(0, 0)", opacity: 1 },
+          {
+            transform: `translate(${translateX}px, ${translateY}px) scale(0.2)`,
+            opacity: 0.2,
+          },
+        ],
+        { duration: 800, easing: "cubic-bezier(0.22, 1, 0.36, 1)" }
+      ).onfinish = () => {
+        clone.remove();
+        try {
+          window.dispatchEvent(
+            new CustomEvent("cart:add", { detail: { product_item_id } })
+          );
+        } catch (_) {}
+      };
+    } catch (_) {}
+  };
   const formatVND = (value: number) =>
     new Intl.NumberFormat("vi-VN", {
       style: "currency",
@@ -28,11 +74,12 @@ const ProductCard = ({
   const isCart = variant === "cart";
   if (isCart) {
     return (
-      <div className="flex flex-row gap-4 mt-4">
+      <div className="flex flex-row gap-4 flex-1">
         <img
+          ref={imgRef}
           src={product.image}
           alt=""
-          className="rounded-lg w-28 h-full object-cover shrink-0"
+          className=" rounded-lg w-28 object-cover shrink-0 "
         />
         <div className="flex flex-col flex-1">
           <div className="flex flex-row justify-between items-center">
@@ -102,6 +149,7 @@ const ProductCard = ({
         }
       >
         <img
+          ref={imgRef}
           src={product.image}
           alt={product.title}
           className={
@@ -151,15 +199,6 @@ const ProductCard = ({
             <p className="text-sm text-gray-200 md:text-gray-700">
               {product.description}
             </p>
-            {(product.balance || product.material || product.stringTension) && (
-              <div className="hidden md:grid grid-cols-3 gap-4 text-xs text-gray-600">
-                {product.balance && <span>balance: {product.balance}</span>}
-                {product.material && <span>material: {product.material}</span>}
-                {product.stringTension && (
-                  <span>stringTension: {product.stringTension}</span>
-                )}
-              </div>
-            )}
           </>
         ) : (
           variant === "default" && (
@@ -210,9 +249,20 @@ const ProductCard = ({
           )}
 
           <button
+            onClick={(e) => {
+              e.stopPropagation();
+              e.preventDefault();
+              flyToCart();
+              onAddToCart?.();
+            }}
+            disabled={!onAddToCart || product.inStockCount === 0}
             className={
               isList
-                ? "flex items-center gap-2 text-sm hover:opacity-80"
+                ? `flex items-center gap-2 text-sm hover:opacity-80 ${
+                    !onAddToCart || product.inStockCount === 0
+                      ? "cursor-not-allowed opacity-50"
+                      : ""
+                  }`
                 : "p-2 rounded-full hover:bg-gray-100 transition-colors"
             }
             aria-label="Add to cart"
@@ -238,12 +288,18 @@ const ProductCard = ({
               )}
             </div>
             <button
+              onClick={(e) => {
+                e.stopPropagation();
+                e.preventDefault();
+                flyToCart();
+                onAddToCart?.();
+              }}
               className={`w-full mt-2 px-4 py-2 rounded-lg text-black font-semibold ${
-                product.inStockCount > 0
-                  ? "bg-white-600"
-                  : "bg-white-600 cursor-not-allowed"
+                product.inStockCount > 0 && onAddToCart
+                  ? "bg-white-600 hover:bg-gray=100 cursor-pointer"
+                  : "bg-white-600 cursor-not-allowed opacity-50"
               }`}
-              disabled={product.inStockCount === 0}
+              disabled={!onAddToCart || product.inStockCount === 0}
             >
               <div className="flex items-center justify-center gap-2">
                 <ShoppingCart size={18} />

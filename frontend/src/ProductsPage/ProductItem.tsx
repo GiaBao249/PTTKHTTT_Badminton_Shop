@@ -22,8 +22,10 @@ import FullDescription from "../Components/FullDescription";
 import Specification from "../Components/Specification";
 import Review from "../Components/Review";
 import { StarRating } from "../Components/RatingStar";
-
+import { useAuth } from "../contexts/AuthContext";
+import { cartService } from "../services/cartService";
 const ProductItem = () => {
+  const { user, token } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
   const { id } = useParams();
@@ -32,13 +34,60 @@ const ProductItem = () => {
   const [activeTab, setActiveTab] = useState<
     "description" | "specifications" | "review"
   >("description");
+  const [productItems, setProductItems] = useState<any[]>([]);
+  const [addingToCart, setAddingToCart] = useState(false);
   const [product, setProduct] = useState<Products | null>(
     (location.state as Products | undefined) ??
       (location.state as { product?: Products } | undefined)?.product ??
       null
   );
-  const [loading, setLoading] = useState(!product);
 
+  const handleAddToCart = async () => {
+    if (!user || !token) {
+      alert("Vui lòng đăng nhập trước khi mua hàng");
+      navigate("/login");
+      return;
+    }
+    if (countProduct <= 0) {
+      alert("Vui lòng chọn số lượng > 0");
+      return;
+    }
+    if (!productItems || productItems.length === 0) {
+      alert("Không có sản phẩm");
+    }
+    setAddingToCart(true);
+    console.log(productItems[0]);
+    const product_item_id = productItems[0].product_item_id;
+    try {
+      const res = await fetch(`${API_BASE}/api/orders/cart/add`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          product_item_id: product_item_id,
+          quantity: countProduct,
+        }),
+      });
+      if (!res.ok) {
+        throw new Error("Không gửi được thông tin lên server");
+      }
+      alert("Đã thêm vào giỏ hàng");
+      try {
+        window.dispatchEvent(
+          new CustomEvent("cart:add", { detail: { product_item_id } })
+        );
+      } catch (_) {}
+      setCountProduct(0);
+    } catch (error) {
+      throw new Error("Lỗi server");
+    } finally {
+      setAddingToCart(false);
+    }
+  };
+  const [loading, setLoading] = useState(!product);
+  const API_BASE = import.meta.env.VITE_API_URL;
   const formatVND = (v: number) =>
     new Intl.NumberFormat("vi-VN", {
       style: "currency",
@@ -50,15 +99,18 @@ const ProductItem = () => {
   };
 
   useEffect(() => {
-    if (!product && id) {
-      setLoading(true);
-      fetch(`${import.meta.env.VITE_API_URL}/api/products/${id}`)
-        .then((res) => {
-          if (!res.ok) throw new Error(`HTTP ${res.status}`);
-          return res.json();
-        })
-        .then((data) => {
-          const mapped: Products = {
+    const fetchDataAddInShop = async () => {
+      if (!id) return;
+      try {
+        setLoading(true);
+        const res = await fetch(`${API_BASE}/api/products/${id}`);
+        if (!res.ok) {
+          throw new Error(`HTTP ${res.status}`);
+        }
+        const data = await res.json();
+        // xu li data ve form products
+        if (!product) {
+          const mappingProduct: Products = {
             id: data.product_id,
             title: data.product_name,
             price: data.price,
@@ -76,16 +128,17 @@ const ProductItem = () => {
             company: "",
             color: "",
           };
-          setProduct(mapped);
-        })
-        .catch((err) => {
-          console.error("Error loading product:", err);
-        })
-        .finally(() => {
-          setLoading(false);
-        });
-    }
-  }, [id, product]);
+          setProduct(mappingProduct);
+        }
+        setProductItems(data.items || []);
+      } catch (error) {
+        throw new Error("Lỗi: Không thể tải được sản phẩm");
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchDataAddInShop();
+  }, [id]);
 
   if (loading) {
     return (
@@ -109,7 +162,6 @@ const ProductItem = () => {
     const prev = (prev: number) => Math.max(prev - 1, 0);
     setCountProduct(prev);
   };
-
   return (
     <section className="py-6 md:py-8">
       <div className="mx-auto max-w-7xl px-4 md:px-6 lg:px-8">
@@ -219,6 +271,7 @@ const ProductItem = () => {
             <div className="flex flex-row gap-2">
               <div className="flex-1">
                 <button
+                  onClick={handleAddToCart}
                   className={`w-full inline-flex items-center justify-center gap-3 px-4 py-3 rounded-lg border border-black/20 bg-white ${
                     countProduct > 0
                       ? "bg-[linear-gradient(90deg,theme(colors.blue.500),theme(colors.blue.600))] bg-no-repeat bg-[length:0%_100%] hover:bg-[length:100%_100%] transition-[background-size] duration-300 ease-out text-black hover:text-white font-bold"
@@ -243,7 +296,7 @@ const ProductItem = () => {
                   Miễn phí vận chuyển
                 </p>
                 <p className="text-gray-700 text-lg text-center">
-                  Áp dụng cho đơn từ 350.000đ
+                  Áp dụng cho đơn từ 1.000.000đ
                 </p>
               </div>
               <div className="flex flex-col items-center text-center">
