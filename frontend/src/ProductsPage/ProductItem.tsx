@@ -23,7 +23,6 @@ import Specification from "../Components/Specification";
 import Review from "../Components/Review";
 import { StarRating } from "../Components/RatingStar";
 import { useAuth } from "../contexts/AuthContext";
-import { cartService } from "../services/cartService";
 const ProductItem = () => {
   const { user, token } = useAuth();
   const location = useLocation();

@@ -6,6 +6,7 @@ import { User, LogOut, ShoppingBag, Settings } from "lucide-react";
 const UserMenu = () => {
   const { user, logout } = useAuth();
   const [isOpen, setIsOpen] = useState(false);
+
   const navigate = useNavigate();
   const menuRef = useRef<HTMLDivElement>(null);
 
@@ -57,7 +58,6 @@ const UserMenu = () => {
         </div>
       </button>
 
-      {/* Dropdown Menu */}
       {isOpen && (
         <div className="absolute right-0 mt-2 w-56 bg-white rounded-lg shadow-lg py-2 z-50 border border-gray-200">
           <div className="px-4 py-3 border-b border-gray-200">
@@ -69,13 +69,13 @@ const UserMenu = () => {
 
           <button
             onClick={() => {
-              navigate("/orders");
+              navigate("/account");
               setIsOpen(false);
             }}
             className="w-full flex items-center gap-3 px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors"
           >
             <ShoppingBag className="h-4 w-4" />
-            Đơn hàng của tôi
+            Tài khoản & Đơn hàng
           </button>
 
           {user.role === "admin" && (
