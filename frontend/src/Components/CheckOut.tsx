@@ -1,11 +1,11 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Check } from "lucide-react";
 import { useLocation, useNavigate } from "react-router-dom";
+import { useAuth } from "../contexts/AuthContext";
 type Step = 1 | 2 | 3 | 4;
 
 type ShippingInfo = {
-  firstName: string;
-  lastName: string;
+  fullName: string;
   email: string;
   phone: string;
   address: string;
@@ -17,6 +17,7 @@ type ShippingInfo = {
 const CheckOut = () => {
   const location = useLocation();
   const navigate = useNavigate();
+  const { user } = useAuth();
 
   const { subtotal = 0, cartItems = [] } =
     (location.state as {
@@ -29,8 +30,7 @@ const CheckOut = () => {
   }
   const [currentStep, setCurrentStep] = useState<Step>(1);
   const [shippingInfo, setShippingInfo] = useState<ShippingInfo>({
-    firstName: "",
-    lastName: "",
+    fullName: "",
     email: "",
     phone: "",
     address: "",
@@ -67,6 +67,20 @@ const CheckOut = () => {
   const handleInputChange = (field: keyof ShippingInfo, value: string) => {
     setShippingInfo((prev) => ({ ...prev, [field]: value }));
   };
+
+  useEffect(() => {
+    if (!user) return;
+    setShippingInfo((prev) => ({
+      ...prev,
+      fullName: (user.name || user.username || prev.fullName || "").trim(),
+      email: (user as any)?.email || prev.email,
+      phone: (user as any)?.phone || prev.phone,
+      address: (user as any)?.address || prev.address,
+      city: (user as any)?.city || prev.city,
+      district: (user as any)?.district || prev.district,
+      postalCode: (user as any)?.postal_code || prev.postalCode,
+    }));
+  }, [user]);
 
   const canProceed = () => {
     if (currentStep === 1) {
@@ -123,33 +137,19 @@ const CheckOut = () => {
             {currentStep === 1 && (
               <div className="space-y-6">
                 <h2 className="text-2xl font-bold">Thông tin giao hàng</h2>
-                <div className="grid md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium mb-2">Họ</label>
-                    <input
-                      type="text"
-                      value={shippingInfo.firstName}
-                      onChange={(e) =>
-                        handleInputChange("firstName", e.target.value)
-                      }
-                      placeholder="Nguyễn"
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium mb-2">
-                      Tên
-                    </label>
-                    <input
-                      type="text"
-                      value={shippingInfo.lastName}
-                      onChange={(e) =>
-                        handleInputChange("lastName", e.target.value)
-                      }
-                      placeholder="Văn A"
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
-                    />
-                  </div>
+                <div>
+                  <label className="block text-sm font-medium mb-2">
+                    Họ và tên
+                  </label>
+                  <input
+                    type="text"
+                    value={shippingInfo.fullName}
+                    onChange={(e) =>
+                      handleInputChange("fullName", e.target.value)
+                    }
+                    placeholder="Nguyễn Văn A"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                  />
                 </div>
                 <div>
                   <label className="block text-sm font-medium mb-2">
@@ -335,9 +335,7 @@ const CheckOut = () => {
                 <div className="space-y-4">
                   <div className="p-4 bg-gray-50 rounded-lg">
                     <h3 className="font-bold mb-2">Thông tin giao hàng</h3>
-                    <p>
-                      {shippingInfo.firstName} {shippingInfo.lastName}
-                    </p>
+                    <p>{shippingInfo.fullName}</p>
                     <p>{shippingInfo.email}</p>
                     <p>{shippingInfo.phone}</p>
                     <p>{shippingInfo.address}</p>
