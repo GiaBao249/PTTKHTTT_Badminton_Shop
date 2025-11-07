@@ -9,43 +9,82 @@ const JWT_SECRET = process.env.JWT_SECRET;
 // post login account
 // database -(query user)-> người dùng đăng nhập -(thành công)-> tạo token(jwt) -> return token + user information
 router.post("/login", async (req, res) => {
-  const { username, password, role } = req.body;
+  const { username, password } = req.body;
   try {
-    if (!["admin", "user"].includes(role))
-      return res.status(401).json({ error: "Invalid role" });
-    let dbTable: string, joinTable: string, idField: string, nameField: string;
-    if (role === "user") {
-      dbTable = "customeraccounts";
-      joinTable = "customer";
-      idField = "customer_id";
-      nameField = "customer_name";
-    } else {
-      dbTable = "adminaccounts";
-      joinTable = "employees";
-      idField = "employee_id";
-      nameField = "name";
+    const tryFetch = async (
+      accountTable: string,
+      joinTable: string,
+      idField: string,
+      nameField: string
+    ) => {
+      const { data, error } = await supabase
+        .from(accountTable)
+        .select(`username,password,${idField},${joinTable}(${nameField})`)
+        .eq("username", username)
+        .single();
+      return { data, error } as { data: any | null; error: any };
+    };
+
+    let role: "user" | "admin" | null = null;
+    let account: any = null;
+    let meta = { accountTable: "", joinTable: "", idField: "", nameField: "" };
+
+    {
+      const res1 = await tryFetch(
+        "customeraccounts",
+        "customer",
+        "customer_id",
+        "customer_name"
+      );
+      if (!res1.error && res1.data) {
+        role = "user";
+        account = res1.data;
+        meta = {
+          accountTable: "customeraccounts",
+          joinTable: "customer",
+          idField: "customer_id",
+          nameField: "customer_name",
+        };
+      }
     }
 
-    const { data: AccountRow, error } = await supabase
-      .from(dbTable)
-      .select(`username , password , ${idField} , ${joinTable} (${nameField})`)
-      .eq("username", username)
-      .single();
-    if (error || !AccountRow) {
+    if (!account) {
+      const res2 = await tryFetch(
+        "adminaccounts",
+        "employees",
+        "employee_id",
+        "name"
+      );
+      if (!res2.error && res2.data) {
+        role = "admin";
+        account = res2.data;
+        meta = {
+          accountTable: "adminaccounts",
+          joinTable: "employees",
+          idField: "employee_id",
+          nameField: "name",
+        };
+      }
+    }
+
+    if (!account || !role) {
       return res.status(401).json({
         error: "Không đăng nhập được vui lòng kiểm tra lại thông tin",
       });
     }
-    const account: any = AccountRow;
+
     let passwordMatching: boolean;
-    if (account.password.startsWith("$2b$")) {
+    if (
+      typeof account.password === "string" &&
+      account.password.startsWith("$2b$")
+    ) {
       passwordMatching = await bcrypt.compare(password, account.password);
     } else {
       passwordMatching = password === account.password;
       if (passwordMatching) {
         const hashedPassword = await bcrypt.hash(password, 10);
         await supabase
-          .from(dbTable)
+          .from(meta.accountTable)
           .update({ password: hashedPassword })
           .eq("username", username);
       }
@@ -54,11 +93,12 @@ router.post("/login", async (req, res) => {
     if (!passwordMatching) {
       return res.status(401).json({ error: "Password không đúng " });
     }
+
     const token = jwt.sign(
       {
         username: account.username,
         role,
-        id: account[idField],
+        id: account[meta.idField],
       },
       JWT_SECRET!,
       { expiresIn: "7d" }
@@ -68,8 +108,8 @@ router.post("/login", async (req, res) => {
       token,
       username: account.username,
       role,
-      id: account[idField],
-      name: account[joinTable]?.[nameField],
+      id: account[meta.idField],
+      name: account[meta.joinTable]?.[meta.nameField],
     });
   } catch (err) {
     res.status(401).json({ error: "Lỗi Server" });

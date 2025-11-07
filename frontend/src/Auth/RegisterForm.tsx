@@ -97,36 +97,6 @@ const RegisterForm = () => {
 
           <div className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Loại tài khoản
-              </label>
-              <div className="grid grid-cols-2 gap-3">
-                <button
-                  type="button"
-                  onClick={() => setFormData({ ...formData, role: "user" })}
-                  className={`py-3 px-4 rounded-lg font-medium transition-all ${
-                    formData.role === "user"
-                      ? "bg-indigo-600 text-white shadow-lg"
-                      : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-                  }`}
-                >
-                  Khách hàng
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setFormData({ ...formData, role: "admin" })}
-                  className={`py-3 px-4 rounded-lg font-medium transition-all ${
-                    formData.role === "admin"
-                      ? "bg-indigo-600 text-white shadow-lg"
-                      : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-                  }`}
-                >
-                  Quản trị viên
-                </button>
-              </div>
-            </div>
-
-            <div>
               <label
                 htmlFor="name"
                 className="block text-sm font-medium text-gray-700 mb-2"

@@ -16,11 +16,7 @@ type User = {
 interface AuthContextType {
   user: User | null;
   token: string | null;
-  login: (
-    username: string,
-    password: string,
-    role: "admin" | "user"
-  ) => Promise<void>;
+  login: (username: string, password: string) => Promise<void>;
   logout: () => void;
   isLoading: boolean;
 }
@@ -42,20 +38,18 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
     setIsLoading(false);
   }, []);
-  const login = async (
-    username: string,
-    password: string,
-    role: "admin" | "user"
-  ) => {
+  const login = async (username: string, password: string) => {
     const res = await fetch(`${API_BASE}/api/auth/login`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ username, password, role }),
+      body: JSON.stringify({ username, password }),
     });
     if (!res.ok) {
       const error = await res.json();
       // console.log(error.error);
-      throw new Error(error.error || "Login thất bại");
+      throw new Error(
+        error.error || "Login thất bại vui lòng kiểm tra thông tin"
+      );
     }
     const data = await res.json();
     setToken(data.token);

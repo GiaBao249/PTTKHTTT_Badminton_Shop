@@ -6,7 +6,6 @@ import { Lock, User, LogIn } from "lucide-react";
 const LoginForm = () => {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
-  const [role, setRole] = useState<"user" | "admin">("user");
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
@@ -19,8 +18,16 @@ const LoginForm = () => {
     setIsLoading(true);
 
     try {
-      await login(username, password, role);
-      navigate("/");
+      await login(username, password);
+      // redirect theo role đã trả về trong context
+      const next = localStorage.getItem("auth_user") || "";
+      try {
+        const parsed = next ? JSON.parse(next) : null;
+        if (parsed?.role === "admin") navigate("/admin");
+        else navigate("/");
+      } catch (_) {
+        navigate("/");
+      }
     } catch (err: any) {
       setError("Đăng nhập thất bại");
     } finally {
@@ -51,36 +58,6 @@ const LoginForm = () => {
           )}
 
           <div className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Đăng nhập với tư cách
-              </label>
-              <div className="grid grid-cols-2 gap-3">
-                <button
-                  type="button"
-                  onClick={() => setRole("user")}
-                  className={`py-3 px-4 rounded-lg font-medium transition-all ${
-                    role === "user"
-                      ? "bg-indigo-600 text-white shadow-lg"
-                      : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-                  }`}
-                >
-                  Khách hàng
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setRole("admin")}
-                  className={`py-3 px-4 rounded-lg font-medium transition-all ${
-                    role === "admin"
-                      ? "bg-indigo-600 text-white shadow-lg"
-                      : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-                  }`}
-                >
-                  Quản trị viên
-                </button>
-              </div>
-            </div>
-
             <div>
               <label
                 htmlFor="username"
