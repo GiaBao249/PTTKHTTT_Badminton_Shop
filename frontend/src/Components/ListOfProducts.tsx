@@ -24,8 +24,6 @@ const ListOfProducts = ({ selectedOptionIds = [], categoryId }: Props) => {
     "Liên quan",
     "Giá: Thấp đến cao",
     "Giá: Cao đến thấp",
-    "Phổ biến",
-    "Đánh giá",
   ];
   const dataPerPageButton: string[] = [
     "6sp mỗi trang",

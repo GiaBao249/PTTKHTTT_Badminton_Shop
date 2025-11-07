@@ -374,7 +374,6 @@ const Orders = () => {
         )}
       </DialogViewDetails>
 
-      {/* Dialog Cập nhật trạng thái */}
       <DialogStatusUpdate
         open={openStatusUpdate}
         onClose={() => {

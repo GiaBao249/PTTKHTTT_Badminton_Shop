@@ -66,7 +66,7 @@ const AdminLayout = () => {
             </button>
           </div>
 
-          <nav className="flex-1 p-4 space-y-2 overflow-y-auto">
+          <nav className="flex-1 p-4 space-y-2 overflow-y-auto relative">
             {menuItems.map((item) => {
               const Icon = item.icon;
               return (
@@ -85,7 +85,7 @@ const AdminLayout = () => {
             })}
           </nav>
 
-          <div className="p-4 border-t border-gray-200 flex-shrink-0">
+          <div className="p-4 border-t border-gray-200 flex-shrink-0 absolute bottom-0">
             <div className="flex items-center gap-3 px-4 py-3 mb-2">
               <div className="h-10 w-10 bg-indigo-600 rounded-full flex items-center justify-center text-white font-semibold">
                 {user?.name?.[0]?.toUpperCase() ||
