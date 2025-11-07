@@ -1,0 +1,160 @@
+import { useEffect, useState } from "react";
+import { ShoppingBag, Users, Package, TrendingUp } from "lucide-react";
+
+const Dashboard = () => {
+  const [stats, setStats] = useState({
+    totalOrders: 0,
+    totalCustomers: 0,
+    totalProducts: 0,
+    revenue: 0,
+  });
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    setTimeout(() => {
+      setStats({
+        totalOrders: 1248,
+        totalCustomers: 856,
+        totalProducts: 342,
+        revenue: 125000000,
+      });
+      setLoading(false);
+    }, 500);
+  }, []);
+
+  const formatVND = (v: number) =>
+    new Intl.NumberFormat("vi-VN", {
+      style: "currency",
+      currency: "VND",
+    }).format(v);
+
+  const statCards = [
+    {
+      title: "Tổng đơn hàng",
+      value: stats.totalOrders.toLocaleString(),
+      icon: ShoppingBag,
+      color: "bg-blue-500",
+      change: "+12.5%",
+    },
+    {
+      title: "Khách hàng",
+      value: stats.totalCustomers.toLocaleString(),
+      icon: Users,
+      color: "bg-green-500",
+      change: "+8.2%",
+    },
+    {
+      title: "Sản phẩm",
+      value: stats.totalProducts.toLocaleString(),
+      icon: Package,
+      color: "bg-purple-500",
+      change: "+5.1%",
+    },
+    {
+      title: "Doanh thu",
+      value: formatVND(stats.revenue),
+      icon: TrendingUp,
+      color: "bg-orange-500",
+      change: "+15.3%",
+    },
+  ];
+
+  return (
+    <div className="space-y-6">
+      <div>
+        <h1 className="text-3xl font-bold text-gray-900">Tổng quan</h1>
+        <p className="text-gray-600 mt-1">Chào mừng trở lại bảng điều khiển</p>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        {statCards.map((card, idx) => {
+          const Icon = card.icon;
+          return (
+            <div
+              key={idx}
+              className="bg-white rounded-xl shadow-sm border border-gray-200 p-6"
+            >
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-gray-600 mb-1">{card.title}</p>
+                  {loading ? (
+                    <div className="h-8 w-24 bg-gray-200 rounded animate-pulse" />
+                  ) : (
+                    <p className="text-2xl font-bold text-gray-900">
+                      {card.value}
+                    </p>
+                  )}
+                  <p className="text-xs text-green-600 mt-2 flex items-center gap-1">
+                    <TrendingUp size={12} />
+                    {card.change} so với tháng trước
+                  </p>
+                </div>
+                <div className={`${card.color} p-3 rounded-lg`}>
+                  <Icon className="text-white" size={24} />
+                </div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+          <h2 className="text-lg font-semibold text-gray-900 mb-4">
+            Đơn hàng gần đây
+          </h2>
+          <div className="space-y-3">
+            {[1, 2, 3, 4, 5].map((i) => (
+              <div
+                key={i}
+                className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
+              >
+                <div>
+                  <p className="font-medium text-gray-900">
+                    Đơn hàng #{1000 + i}
+                  </p>
+                  <p className="text-sm text-gray-500">Khách hàng {i}</p>
+                </div>
+                <div className="text-right">
+                  <p className="font-semibold text-gray-900">1.250.000đ</p>
+                  <span className="inline-block px-2 py-1 text-xs bg-green-100 text-green-700 rounded-full">
+                    Hoàn thành
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+          <h2 className="text-lg font-semibold text-gray-900 mb-4">
+            Sản phẩm bán chạy
+          </h2>
+          <div className="space-y-3">
+            {[1, 2, 3, 4, 5].map((i) => (
+              <div
+                key={i}
+                className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-12 h-12 bg-gray-200 rounded-lg" />
+                  <div>
+                    <p className="font-medium text-gray-900">Sản phẩm {i}</p>
+                    <p className="text-sm text-gray-500">
+                      {50 + i * 10} đã bán
+                    </p>
+                  </div>
+                </div>
+                <p className="font-semibold text-indigo-600">
+                  {formatVND((500000 + i * 100000) / 100)}
+                </p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default Dashboard;
