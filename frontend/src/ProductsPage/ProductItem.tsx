@@ -23,11 +23,13 @@ import Specification from "../Components/Specification";
 import Review from "../Components/Review";
 import { StarRating } from "../Components/RatingStar";
 import { useAuth } from "../contexts/AuthContext";
+import { toast } from "react-toastify";
 const ProductItem = () => {
   const { user, token } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
   const { id } = useParams();
+  const API_BASE = import.meta.env.VITE_API_URL;
   const [countProduct, setCountProduct] = useState(0);
   const [isZoomed, setIsZoomed] = useState(false);
   const [activeTab, setActiveTab] = useState<
@@ -35,6 +37,7 @@ const ProductItem = () => {
   >("description");
   const [productItems, setProductItems] = useState<any[]>([]);
   const [addingToCart, setAddingToCart] = useState(false);
+  const [cartQuantity, setCartQuantity] = useState(0);
   const [product, setProduct] = useState<Products | null>(
     (location.state as Products | undefined) ??
       (location.state as { product?: Products } | undefined)?.product ??
@@ -43,16 +46,17 @@ const ProductItem = () => {
 
   const handleAddToCart = async () => {
     if (!user || !token) {
-      alert("Vui lòng đăng nhập trước khi mua hàng");
+      toast.warning("Vui lòng đăng nhập trước khi mua hàng");
       navigate("/login");
       return;
     }
     if (countProduct <= 0) {
-      alert("Vui lòng chọn số lượng > 0");
+      toast.warning("Vui lòng chọn số lượng > 0");
       return;
     }
     if (!productItems || productItems.length === 0) {
-      alert("Không có sản phẩm");
+      toast.error("Không có sản phẩm");
+      return;
     }
     setAddingToCart(true);
     console.log(productItems[0]);
@@ -70,23 +74,46 @@ const ProductItem = () => {
         }),
       });
       if (!res.ok) {
-        throw new Error("Không gửi được thông tin lên server");
+        const errorData = await res.json();
+        throw new Error(
+          errorData.error || "Không gửi được thông tin lên server"
+        );
       }
-      alert("Đã thêm vào giỏ hàng");
+      toast.success("Đã thêm vào giỏ hàng");
       try {
         window.dispatchEvent(
           new CustomEvent("cart:add", { detail: { product_item_id } })
         );
+        window.dispatchEvent(new CustomEvent("cart:reload"));
+        if (user && token && user.role === "user") {
+          try {
+            const cartRes = await fetch(
+              `${API_BASE}/api/orders/cart/customer/${user.id}`,
+              {
+                headers: {
+                  Authorization: `Bearer ${token}`,
+                },
+              }
+            );
+            if (cartRes.ok) {
+              const cartData = await cartRes.json();
+              const cartItem = cartData.find(
+                (item: any) =>
+                  item.product_item?.product_item_id === product_item_id
+              );
+              setCartQuantity(cartItem?.quantity || 0);
+            }
+          } catch (error) {}
+        }
       } catch (_) {}
       setCountProduct(0);
-    } catch (error) {
-      throw new Error("Lỗi server");
+    } catch (error: any) {
+      toast.error(error.message || "Lỗi server");
     } finally {
       setAddingToCart(false);
     }
   };
   const [loading, setLoading] = useState(!product);
-  const API_BASE = import.meta.env.VITE_API_URL;
   const formatVND = (v: number) =>
     new Intl.NumberFormat("vi-VN", {
       style: "currency",
@@ -130,6 +157,35 @@ const ProductItem = () => {
           setProduct(mappingProduct);
         }
         setProductItems(data.items || []);
+
+        if (
+          user &&
+          token &&
+          user.role === "user" &&
+          data.items?.[0]?.product_item_id
+        ) {
+          try {
+            const cartRes = await fetch(
+              `${API_BASE}/api/orders/cart/customer/${user.id}`,
+              {
+                headers: {
+                  Authorization: `Bearer ${token}`,
+                },
+              }
+            );
+            if (cartRes.ok) {
+              const cartData = await cartRes.json();
+              const product_item_id = data.items[0].product_item_id;
+              const cartItem = cartData.find(
+                (item: any) =>
+                  item.product_item?.product_item_id === product_item_id
+              );
+              setCartQuantity(cartItem?.quantity || 0);
+            }
+          } catch (error) {
+            console.error("Error fetching cart:", error);
+          }
+        }
       } catch (error) {
         throw new Error("Lỗi: Không thể tải được sản phẩm");
       } finally {
@@ -137,7 +193,43 @@ const ProductItem = () => {
       }
     };
     fetchDataAddInShop();
-  }, [id]);
+  }, [id, user, token]);
+
+  useEffect(() => {
+    const handleCartReload = async () => {
+      if (
+        user &&
+        token &&
+        user.role === "user" &&
+        productItems?.[0]?.product_item_id
+      ) {
+        try {
+          const cartRes = await fetch(
+            `${API_BASE}/api/orders/cart/customer/${user.id}`,
+            {
+              headers: {
+                Authorization: `Bearer ${token}`,
+              },
+            }
+          );
+          if (cartRes.ok) {
+            const cartData = await cartRes.json();
+            const product_item_id = productItems[0].product_item_id;
+            const cartItem = cartData.find(
+              (item: any) =>
+                item.product_item?.product_item_id === product_item_id
+            );
+            setCartQuantity(cartItem?.quantity || 0);
+          }
+        } catch (error) {}
+      }
+    };
+
+    window.addEventListener("cart:reload", handleCartReload);
+    return () => {
+      window.removeEventListener("cart:reload", handleCartReload);
+    };
+  }, [user, token, productItems]);
 
   if (loading) {
     return (
@@ -153,8 +245,13 @@ const ProductItem = () => {
     return <Navigate to="/ProductsPage" replace />;
   }
 
+  const maxAvailableQuantity = Math.max(
+    0,
+    (product?.inStockCount || 0) - cartQuantity
+  );
+
   const handleIncreaseProduct = () => {
-    const next = (prev: number) => Math.min(prev + 1, product.inStockCount);
+    const next = (prev: number) => Math.min(prev + 1, maxAvailableQuantity);
     setCountProduct(next);
   };
   const handleDecreaseProduct = () => {
@@ -233,6 +330,12 @@ const ProductItem = () => {
               {product.inStockCount > 0 ? (
                 <p className="font-sans text-green-600 text-lg">
                   Còn hàng ({product.inStockCount} sản phẩm)
+                  {cartQuantity > 0 && (
+                    <span className="text-gray-600 ml-2">
+                      (Đã có {cartQuantity} trong giỏ, có thể thêm tối đa{" "}
+                      {maxAvailableQuantity})
+                    </span>
+                  )}
                 </p>
               ) : (
                 <p className="font-sans text-red-600 text-lg">Hết hàng</p>
@@ -241,7 +344,7 @@ const ProductItem = () => {
             <p className="text-lg">{product.description}</p>
             <div className="flex flex-row gap-6 items-center">
               <p className="font-bold text-lg">Số lượng:</p>
-              <div className="flex flex-row gap-6 items-center">
+              <div className="flex flex-row gap-2 items-center">
                 <button
                   onClick={() => handleDecreaseProduct()}
                   className={`rounded-lg shadow-sm border p-2 ${
@@ -253,15 +356,37 @@ const ProductItem = () => {
                 >
                   <Minus size={18} />
                 </button>
-                <p className="font-medium text-lg">{countProduct}</p>
+                <input
+                  type=""
+                  min="0"
+                  max={maxAvailableQuantity}
+                  value={countProduct}
+                  onChange={(e) => {
+                    const value = parseInt(e.target.value) || 0;
+                    const clampedValue = Math.max(
+                      0,
+                      Math.min(value, maxAvailableQuantity)
+                    );
+                    setCountProduct(clampedValue);
+                  }}
+                  onBlur={(e) => {
+                    const value = parseInt(e.target.value) || 0;
+                    const clampedValue = Math.max(
+                      0,
+                      Math.min(value, maxAvailableQuantity)
+                    );
+                    setCountProduct(clampedValue);
+                  }}
+                  className="w-20 text-center font-medium text-lg border border-black/20 rounded-lg px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
                 <button
                   onClick={() => handleIncreaseProduct()}
                   className={`rounded-lg shadow-sm border p-2 ${
-                    countProduct === product.inStockCount
+                    countProduct >= maxAvailableQuantity
                       ? "cursor-not-allowed bg-gray-50"
                       : "cursor-pointer border-black/20 hover:shadow-md hover:scale-110 transition-all duration-300 "
                   }`}
-                  disabled={countProduct === product.inStockCount}
+                  disabled={countProduct >= maxAvailableQuantity}
                 >
                   <Plus size={18} />
                 </button>
@@ -271,14 +396,15 @@ const ProductItem = () => {
               <div className="flex-1">
                 <button
                   onClick={handleAddToCart}
+                  disabled={countProduct <= 0 || addingToCart}
                   className={`w-full inline-flex items-center justify-center gap-3 px-4 py-3 rounded-lg border border-black/20 bg-white ${
-                    countProduct > 0
+                    countProduct > 0 && !addingToCart
                       ? "bg-[linear-gradient(90deg,theme(colors.blue.500),theme(colors.blue.600))] bg-no-repeat bg-[length:0%_100%] hover:bg-[length:100%_100%] transition-[background-size] duration-300 ease-out text-black hover:text-white font-bold"
                       : "bg-[linear-gradient(90deg,theme(colors.gray.400),theme(colors.gray.500))] bg-no-repeat bg-[length:0%_100%] hover:bg-[length:100%_100%] transition-[background-size] duration-300 ease-out text-black hover:text-white font-bold cursor-not-allowed"
                   }`}
                 >
                   <ShoppingCart size={22} />
-                  <span>Thêm vào giỏ</span>
+                  <span>{addingToCart ? "Đang thêm..." : "Thêm vào giỏ"}</span>
                 </button>
               </div>
               <button className="rounded-lg shadow-sm border border-black/20 hover:shadow-md hover:scale-110 transition-all duration-300 p-2">

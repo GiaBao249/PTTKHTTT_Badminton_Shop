@@ -11,6 +11,7 @@ type ProductCardProps = {
   product_item_id?: number;
   onIncrease?: () => void;
   onDecrease?: () => void;
+  onUpdateQuantity?: (quantity: number) => void;
   onRemove?: () => void;
   onAddToCart?: () => void;
 };
@@ -21,6 +22,7 @@ const ProductCard = ({
   quantity = 1,
   onIncrease,
   onDecrease,
+  onUpdateQuantity,
   onRemove,
   onAddToCart,
 }: ProductCardProps) => {
@@ -94,7 +96,7 @@ const ProductCard = ({
           <div className="flex flex-col gap-2 mt-1">
             <p className="text-[14px] text-gray-700">{product.category}</p>
             <div className="flex flex-row justify-between items-center">
-              <div className="flex flex-row gap-5 items-center">
+              <div className="flex flex-row gap-2 items-center">
                 <button
                   onClick={onDecrease}
                   className={`rounded-lg shadow-sm border p-1.5 ${
@@ -106,15 +108,51 @@ const ProductCard = ({
                 >
                   <Minus size={18} />
                 </button>
-                <p className="font-medium text-md">{quantity}</p>
+                <input
+                  type=""
+                  min="1"
+                  max={product.inStockCount}
+                  value={quantity}
+                  onChange={(e) => {
+                    const value = parseInt(e.target.value);
+                    if (isNaN(value) || value < 1) return;
+                  }}
+                  onBlur={(e) => {
+                    const value = parseInt(e.target.value) || 1;
+                    const clampedValue = Math.max(
+                      1,
+                      Math.min(value, product.inStockCount)
+                    );
+                    if (clampedValue !== quantity && onUpdateQuantity) {
+                      onUpdateQuantity(clampedValue);
+                    } else if (clampedValue !== quantity) {
+                      // Fallback to onIncrease/onDecrease if onUpdateQuantity not provided
+                      if (clampedValue > quantity) {
+                        for (let i = quantity; i < clampedValue; i++) {
+                          onIncrease?.();
+                        }
+                      } else {
+                        for (let i = quantity; i > clampedValue; i--) {
+                          onDecrease?.();
+                        }
+                      }
+                    }
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.currentTarget.blur();
+                    }
+                  }}
+                  className="w-16 text-center font-medium text-md border border-black/20 rounded-lg px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
                 <button
                   onClick={onIncrease}
                   className={`rounded-lg shadow-sm border p-1.5 ${
-                    quantity === product.inStockCount
+                    quantity >= product.inStockCount
                       ? "cursor-not-allowed bg-gray-50"
                       : "cursor-pointer border-black/20 hover:shadow-md hover:scale-110 transition-all duration-300 "
                   }`}
-                  disabled={quantity === product.inStockCount}
+                  disabled={quantity >= product.inStockCount}
                 >
                   <Plus size={18} />
                 </button>

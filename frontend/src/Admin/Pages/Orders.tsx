@@ -253,7 +253,6 @@ const Orders = () => {
                       >
                         <Eye size={16} />
                       </button>
-                      {/* Chỉ cho phép hủy khi đơn hàng ở trạng thái "Chờ xử lý" */}
                       {order.status === "Chờ xử lý" && (
                         <button
                           onClick={() => handleCancelClick(order)}
@@ -263,7 +262,6 @@ const Orders = () => {
                           <X size={16} />
                         </button>
                       )}
-                      {/* Chỉ cho phép cập nhật trạng thái khi chưa giao và chưa hủy */}
                       {order.status !== "Đã giao" &&
                         order.status !== "Đã hủy" && (
                           <button
@@ -373,8 +371,6 @@ const Orders = () => {
           </div>
         )}
       </DialogViewDetails>
-
-      {/* Dialog Cập nhật trạng thái */}
       <DialogStatusUpdate
         open={openStatusUpdate}
         onClose={() => {

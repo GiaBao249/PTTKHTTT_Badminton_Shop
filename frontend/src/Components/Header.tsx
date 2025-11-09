@@ -51,12 +51,17 @@ const Header = () => {
         setCartCount((c) => Math.max(0, c - 1));
       }
     };
+    const onReload = () => {
+      loadCount();
+    };
     window.addEventListener("cart:add", onAdd as EventListener);
     window.addEventListener("cart:remove", onRemove as EventListener);
+    window.addEventListener("cart:reload", onReload as EventListener);
     return () => {
       mounted = false;
       window.removeEventListener("cart:add", onAdd as EventListener);
       window.removeEventListener("cart:remove", onRemove as EventListener);
+      window.removeEventListener("cart:reload", onReload as EventListener);
     };
   }, [user, token]);
   const handleSetIsProductOpen = () => {

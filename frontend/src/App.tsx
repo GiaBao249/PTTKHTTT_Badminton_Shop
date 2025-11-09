@@ -16,6 +16,7 @@ import Orders from "./Admin/Pages/Orders";
 import Customers from "./Admin/Pages/Customers";
 import { useAuth } from "./contexts/AuthContext";
 import { useEffect } from "react";
+import OrderResultCheckout from "./Components/OrderResultCheckout";
 
 const App = () => {
   const { user, isLoading } = useAuth();
@@ -49,6 +50,9 @@ const App = () => {
           <Route path="orders" element={<Orders />} />
           <Route path="customers" element={<Customers />} />
         </Route>
+      </Route>
+      <Route element={<OrderResultCheckout />}>
+        <Route path="/result-order/:id" element={<OrderResultCheckout />} />
       </Route>
     </Routes>
   );

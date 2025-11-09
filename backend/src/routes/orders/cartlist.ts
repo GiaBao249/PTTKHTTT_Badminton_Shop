@@ -167,53 +167,68 @@ export function registerCartRoutes(router: Router) {
       }
     }
   );
-  router.put("/cart/update", async (req: Request, res: Response) => {
-    const { customer_id, product_item_id, quantity } = req.body;
-    try {
-      const { data: cart } = await supabase
-        .from("cart")
-        .select("cart_id")
-        .eq("customer_id", customer_id)
-        .single();
-      if (!cart) throw new Error("Không thấy thông tin sản phẩm");
-      const { data: productItem } = await supabase
-        .from("product_item")
-        .select("product_id")
-        .eq("product_item_id", product_item_id)
-        .single();
-      if (!productItem) throw new Error("Không tìm thấy sản phẩm");
-
-      const { data: product } = await supabase
-        .from("product")
-        .select("price")
-        .eq("product_id", productItem.product_id)
-        .single();
-
-      if (!product) throw new Error("Không tìm thấy thông tin sản phẩm");
-      const price = product.price;
-      const total_amount = price * quantity;
-      const { data, error } = await supabase
-        .from("cartitems")
-        .update({
-          quantity: quantity,
-          total_amount: total_amount,
-        })
-        .eq("cart_id", cart.cart_id)
-        .eq("product_item_id", product_item_id)
-        .select();
-      if (error) {
-        throw error;
+  router.put(
+    "/cart/update",
+    authRequired,
+    async (req: Request, res: Response) => {
+      const customer_id = (req as any).user?.id;
+      const { product_item_id, quantity } = req.body;
+      if (!customer_id) {
+        return res.status(401).json({ error: "Chưa đăng nhập" });
       }
-      return res.json({
-        success: true,
-        data: data[0],
-      });
-    } catch (error: any) {
-      return res.status(400).json({
-        error: error.message || "Lỗi cập nhật giỏ hàng",
-      });
+      if (!product_item_id || quantity === undefined) {
+        return res.status(400).json({ error: "Thiếu thông tin" });
+      }
+      try {
+        const { data: cart } = await supabase
+          .from("cart")
+          .select("cart_id")
+          .eq("customer_id", customer_id)
+          .single();
+        if (!cart) throw new Error("Không thấy thông tin sản phẩm");
+        const { data: productItem } = await supabase
+          .from("product_item")
+          .select("product_id, quantity")
+          .eq("product_item_id", product_item_id)
+          .single();
+        if (!productItem) throw new Error("Không tìm thấy sản phẩm");
+        if (quantity > productItem.quantity) {
+          return res.status(400).json({
+            error: `Chỉ còn ${productItem.quantity} sản phẩm trong kho`,
+          });
+        }
+        const { data: product } = await supabase
+          .from("product")
+          .select("price")
+          .eq("product_id", productItem.product_id)
+          .single();
+
+        if (!product) throw new Error("Không tìm thấy thông tin sản phẩm");
+        const price = product.price;
+        const total_amount = price * quantity;
+        const { data, error } = await supabase
+          .from("cartitems")
+          .update({
+            quantity: quantity,
+            total_amount: total_amount,
+          })
+          .eq("cart_id", cart.cart_id)
+          .eq("product_item_id", product_item_id)
+          .select();
+        if (error) {
+          throw error;
+        }
+        return res.json({
+          success: true,
+          data: data[0],
+        });
+      } catch (error: any) {
+        return res.status(400).json({
+          error: error.message || "Lỗi cập nhật giỏ hàng",
+        });
+      }
     }
-  });
+  );
   router.delete(
     "/cart/delete",
     authRequired,

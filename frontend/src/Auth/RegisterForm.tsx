@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { Lock, User, LogIn, Phone, UserCircle } from "lucide-react";
+import { toast } from "react-toastify";
 
 const RegisterForm = () => {
   const [formData, setFormData] = useState({
@@ -29,12 +30,16 @@ const RegisterForm = () => {
     setError("");
 
     if (formData.password !== formData.confirmPassword) {
-      setError("Mật khẩu không khớp");
+      const errorMsg = "Mật khẩu không khớp";
+      setError(errorMsg);
+      toast.error(errorMsg);
       return;
     }
 
     if (formData.password.length < 6) {
-      setError("Mật khẩu phải có ít nhất 6 ký tự");
+      const errorMsg = "Mật khẩu phải có ít nhất 6 ký tự";
+      setError(errorMsg);
+      toast.error(errorMsg);
       return;
     }
 
@@ -57,7 +62,8 @@ const RegisterForm = () => {
       });
 
       if (!response.ok) {
-        throw new Error("Đăng ký thất bại");
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Đăng ký thất bại");
       }
 
       const data = await response.json();
@@ -65,9 +71,14 @@ const RegisterForm = () => {
       localStorage.setItem("auth_token", data.token);
       localStorage.setItem("auth_user", JSON.stringify(data.user));
 
-      window.location.href = "/";
+      toast.success("Đăng ký thành công!");
+      setTimeout(() => {
+        window.location.href = "/";
+      }, 1000);
     } catch (err: any) {
-      setError("Đăng ký thất bại");
+      const errorMsg = err.message || "Đăng ký thất bại";
+      setError(errorMsg);
+      toast.error(errorMsg);
     } finally {
       setIsLoading(false);
     }
