@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
 import { Lock, User, LogIn } from "lucide-react";
+import { toast } from "react-toastify";
 
 const LoginForm = () => {
   const [username, setUsername] = useState("");
@@ -19,6 +20,7 @@ const LoginForm = () => {
 
     try {
       await login(username, password);
+      toast.success("Đăng nhập thành công!");
       // redirect theo role đã trả về trong context
       const next = localStorage.getItem("auth_user") || "";
       try {
@@ -29,7 +31,9 @@ const LoginForm = () => {
         navigate("/");
       }
     } catch (err: any) {
-      setError("Đăng nhập thất bại");
+      const errorMessage = err.message || "Đăng nhập thất bại";
+      setError(errorMessage);
+      toast.error(errorMessage);
     } finally {
       setIsLoading(false);
     }

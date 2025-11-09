@@ -80,7 +80,6 @@ const Customers = () => {
         </p>
       </div>
 
-      {/* Search */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
         <div className="relative">
           <Search
@@ -178,7 +177,6 @@ const Customers = () => {
           </table>
         </div>
 
-        {/* Pagination */}
         <div className="bg-gray-50 px-6 py-4 flex items-center justify-between border-t border-gray-200">
           <p className="text-sm text-gray-700">
             Hiển thị <span className="font-medium">1</span> đến{" "}
@@ -200,7 +198,6 @@ const Customers = () => {
         </div>
       </div>
 
-      {/* Dialog Xem chi tiết khách hàng */}
       <DialogViewDetails
         open={openViewDetails}
         onClose={() => {

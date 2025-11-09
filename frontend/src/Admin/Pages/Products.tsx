@@ -229,7 +229,6 @@ const Products = () => {
           </div>
         </div>
       </div>
-      {/* Dialog Thêm sản phẩm */}
       <Dialog
         open={openAddProducts}
         onClose={() => setOpenAddProduct(false)}
@@ -265,7 +264,7 @@ const Products = () => {
                 Giá
               </label>
               <input
-                type="number"
+                type=""
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
                 placeholder="Nhập giá"
               />
@@ -275,7 +274,7 @@ const Products = () => {
                 Số lượng cần mua
               </label>
               <input
-                type="number"
+                type=""
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
                 placeholder="Nhập số lượng"
               />
@@ -307,7 +306,6 @@ const Products = () => {
         </form>
       </Dialog>
 
-      {/* Dialog Sửa sản phẩm */}
       <DialogEditProduct
         open={openEditProduct}
         onClose={() => {
@@ -350,7 +348,7 @@ const Products = () => {
                 Giá
               </label>
               <input
-                type="number"
+                type=""
                 defaultValue={selectedProduct?.price || 0}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
                 placeholder="Nhập giá"
@@ -361,7 +359,7 @@ const Products = () => {
                 Tồn kho
               </label>
               <input
-                type="number"
+                type=""
                 defaultValue={selectedProduct?.stock || 0}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
                 placeholder="Nhập số lượng"
@@ -389,7 +387,6 @@ const Products = () => {
         </form>
       </DialogEditProduct>
 
-      {/* Dialog Xác nhận xóa */}
       <DialogDeleteConfirm
         open={openDeleteConfirm}
         onClose={() => {

@@ -6,6 +6,7 @@ import { toUIProduct } from "../utils/productMapper";
 import { Link, useNavigate } from "react-router-dom";
 import { cartService } from "../services/cartService";
 import { useAuth } from "../contexts/AuthContext";
+import { toast } from "react-toastify";
 const API_BASE = import.meta.env.VITE_API_URL;
 
 type Description = {
@@ -172,7 +173,9 @@ const HotProducts = () => {
                       variant="minimal"
                       onAddToCart={async () => {
                         if (!token) {
-                          alert("Vui lòng đăng nhập trước khi mua hàng");
+                          toast.warning(
+                            "Vui lòng đăng nhập trước khi mua hàng"
+                          );
                           navigate("/login");
                           return;
                         }
@@ -186,15 +189,16 @@ const HotProducts = () => {
                           }
                           const data = await res.json();
                           if (!data.items || data.items.length === 0) {
-                            alert("Sản phẩm không có phiên bản nào");
+                            toast.warning("Sản phẩm không có phiên bản nào");
                             return;
                           }
 
                           const product_item_id = data.items[0].product_item_id;
                           await cartService.addItem(product_item_id, 1, token);
-                          alert("Đã thêm vào giỏ hàng");
+                          toast.success("Đã thêm vào giỏ hàng");
+                          window.dispatchEvent(new CustomEvent("cart:reload"));
                         } catch (error) {
-                          alert(
+                          toast.warning(
                             error instanceof Error
                               ? error.message
                               : "Lỗi khi thêm vào giỏ hàng"
