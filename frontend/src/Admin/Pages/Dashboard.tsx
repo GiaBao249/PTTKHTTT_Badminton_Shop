@@ -9,17 +9,32 @@ const Dashboard = () => {
     revenue: 0,
   });
   const [loading, setLoading] = useState(true);
-
+  const API_BASE = import.meta.env.VITE_API_URL;
   useEffect(() => {
-    setTimeout(() => {
-      setStats({
-        totalOrders: 1248,
-        totalCustomers: 856,
-        totalProducts: 342,
-        revenue: 125000000,
-      });
-      setLoading(false);
-    }, 500);
+    const test = async () => {
+      try {
+        setLoading(true);
+
+        const res = await fetch(`${API_BASE}/api/admin/dashboard`, {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+          },
+        });
+
+        if (!res.ok) {
+          throw new Error("Không thể tải dữ liệu dashboard");
+        }
+
+        const data = await res.json();
+        setStats(data);
+      } catch (err) {
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    test();
   }, []);
 
   const formatVND = (v: number) =>
