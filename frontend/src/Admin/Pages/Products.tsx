@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Plus, Search, Edit, Trash2 } from "lucide-react";
 import { Dialog, DialogEditProduct, DialogDeleteConfirm } from "../Components";
 const Products = () => {
@@ -7,48 +7,52 @@ const Products = () => {
   const [openEditProduct, setOpenEditProduct] = useState(false);
   const [openDeleteConfirm, setOpenDeleteConfirm] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<{
-    id: number;
-    name: string;
-    category: string;
+    product_id: number;
+    supplier_id: number;
+    category_id: number;
+    product_name: string;
     price: number;
-    stock: number;
-    status: string;
+    description: string;
+    warranty_period: number;
   } | null>(null);
+
+  interface Product {
+    product_id: number;
+    supplier_id: number;
+    category_id: number;
+    product_name: string;
+    price: number;
+    description: string;
+    warranty_period: number;
+  }
+
+  interface ProductItem {
+    product_item_id: number;
+    product_id: number;
+    quantity: number;
+  }
+  
   const [isDeleting, setIsDeleting] = useState(false);
-  const [products, setProducts] = useState([
-    {
-      id: 1,
-      name: "Vợt cầu lông Yonex",
-      category: "Vợt",
-      price: 1500000,
-      stock: 45,
-      status: "Còn hàng",
-    },
-    {
-      id: 2,
-      name: "Áo thể thao Adidas",
-      category: "Quần áo",
-      price: 450000,
-      stock: 120,
-      status: "Còn hàng",
-    },
-    {
-      id: 3,
-      name: "Giày cầu lông Nike",
-      category: "Giày",
-      price: 2200000,
-      stock: 0,
-      status: "Hết hàng",
-    },
-    {
-      id: 4,
-      name: "Quả cầu lông Yonex",
-      category: "Phụ kiện",
-      price: 85000,
-      stock: 200,
-      status: "Còn hàng",
-    },
-  ]);
+  const [products, setProducts] = useState<Product[]>([]);
+  const [productsItem, setProductItem] = useState<ProductItem[]>([]);
+
+  const API_BASE = import.meta.env.VITE_API_URL
+  useEffect(() => {
+    const fetchProducts = async () => {
+      try {
+        const [productsRes, productItemRes] = await Promise.all([
+          fetch(`${API_BASE}/api/admin/getProducts`).then(res => res.json()),
+          fetch(`${API_BASE}/api/admin/getProductsItem`).then(res => res.json()),
+        ]);
+        
+        setProducts(productsRes);
+        setProductItem(productItemRes);
+      } catch (error) {
+        console.error("Lỗi khi fetch sản phẩm:", error);
+      }
+    }
+    fetchProducts();
+  });
 
   const formatVND = (v: number) =>
     new Intl.NumberFormat("vi-VN", {
@@ -57,7 +61,7 @@ const Products = () => {
     }).format(v);
 
   const filteredProducts = products.filter((p) =>
-    p.name.toLowerCase().includes(searchTerm.toLowerCase())
+    p.product_name.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   const handleEdit = (product: (typeof products)[0]) => {
@@ -75,7 +79,7 @@ const Products = () => {
     setIsDeleting(true);
     // TODO: Gọi API xóa sản phẩm
     await new Promise((resolve) => setTimeout(resolve, 1500));
-    setProducts(products.filter((p) => p.id !== selectedProduct.id));
+    setProducts(products.filter((p) => p.product_id !== selectedProduct.product_id));
     setIsDeleting(false);
     setOpenDeleteConfirm(false);
     setSelectedProduct(null);
@@ -149,40 +153,40 @@ const Products = () => {
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
               {filteredProducts.map((product) => (
-                <tr key={product.id} className="hover:bg-gray-50">
+                <tr key={product.product_id} className="hover:bg-gray-50">
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex items-center gap-3">
                       <div className="w-12 h-12 bg-gray-200 rounded-lg" />
                       <div>
                         <p className="text-sm font-medium text-gray-900">
-                          {product.name}
+                          {product.product_name}
                         </p>
                         <p className="text-xs text-gray-500">
-                          ID: #{product.id}
+                          ID: #{product.product_id}
                         </p>
                       </div>
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <span className="px-2 py-1 text-xs bg-gray-100 text-gray-700 rounded-full">
-                      {product.category}
+                      {product.category_id}
                     </span>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-gray-900">
                     {formatVND(product.price)}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {product.stock}
+                    {productsItem.find(pi => pi.product_id === product.product_id)?.quantity || 0}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <span
                       className={`inline-block px-2 py-1 text-xs rounded-full ${
-                        product.status === "Còn hàng"
+                        (productsItem.find(pi => pi.product_id === product.product_id)?.quantity || 0 > 0 ? "Còn hàng" : "Hết hàng") === "Còn hàng"
                           ? "bg-green-100 text-green-700"
                           : "bg-red-100 text-red-700"
                       }`}
                     >
-                      {product.status}
+                      {productsItem.find(pi => pi.product_id === product.product_id)?.quantity || 0 > 0 ? "Còn hàng" : "Hết hàng"}
                     </span>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
@@ -322,7 +326,7 @@ const Products = () => {
             </label>
             <input
               type="text"
-              defaultValue={selectedProduct?.name || ""}
+              defaultValue={selectedProduct?.product_name || ""}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
               placeholder="Nhập tên sản phẩm"
             />
@@ -332,7 +336,7 @@ const Products = () => {
               Danh mục sản phẩm
             </label>
             <select
-              defaultValue={selectedProduct?.category || ""}
+              defaultValue={selectedProduct?.category_id || ""}
               className="px-4 py-2 w-full border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
             >
               <option>Danh mục sản phẩm</option>
@@ -360,7 +364,7 @@ const Products = () => {
               </label>
               <input
                 type=""
-                defaultValue={selectedProduct?.stock || 0}
+                defaultValue={productsItem.find(pi => pi.product_id === selectedProduct?.product_id)?.quantity || 0}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
                 placeholder="Nhập số lượng"
               />
@@ -396,7 +400,7 @@ const Products = () => {
         onConfirm={handleDeleteConfirm}
         title="Xác nhận xóa sản phẩm"
         message="Bạn có chắc chắn muốn xóa sản phẩm này? Hành động này không thể hoàn tác."
-        itemName={selectedProduct?.name}
+        itemName={selectedProduct?.product_name}
         isLoading={isDeleting}
       />
     </div>

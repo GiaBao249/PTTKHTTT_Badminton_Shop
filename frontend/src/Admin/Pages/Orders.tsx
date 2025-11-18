@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Search, Eye, Edit2, X } from "lucide-react";
 import {
   DialogViewDetails,
@@ -22,40 +22,32 @@ const Orders = () => {
   } | null>(null);
   const [isUpdating, setIsUpdating] = useState(false);
   const [isCanceling, setIsCanceling] = useState(false);
-  const [orders, setOrders] = useState([
-    {
-      id: 1001,
-      customer: "Nguyễn Văn A",
-      date: "2024-01-15",
-      total: 2500000,
-      status: "Đã giao",
-      items: 3,
-    },
-    {
-      id: 1002,
-      customer: "Trần Thị B",
-      date: "2024-01-14",
-      total: 1800000,
-      status: "Đang giao",
-      items: 2,
-    },
-    {
-      id: 1003,
-      customer: "Lê Văn C",
-      date: "2024-01-13",
-      total: 3200000,
-      status: "Chờ xử lý",
-      items: 5,
-    },
-    {
-      id: 1004,
-      customer: "Phạm Thị D",
-      date: "2024-01-12",
-      total: 950000,
-      status: "Đã hủy",
-      items: 1,
-    },
-  ]);
+
+  interface Order {
+    order_id: number;
+    customer_id: number;
+    status: string;
+    total_amount: number;
+    order_date: number;
+    delivery_date: number;
+    address_id: string;
+  }
+  const [orders, setOrders] = useState<Order[]>([]);
+  useEffect(() => {
+    const fetchOrders = async () => {
+      try {
+        const res = await fetch(`${import.meta.env.VITE_API_URL}/api/products/order`,
+          { method: "GET" }
+        );
+        
+        const data = await res.json();
+        setOrders(data);
+      } catch (error) {
+        console.error("Lỗi khi fetch đơn hàng:", error);
+      }
+    }
+    fetchOrders();
+}, []);
 
   const formatVND = (v: number) =>
     new Intl.NumberFormat("vi-VN", {

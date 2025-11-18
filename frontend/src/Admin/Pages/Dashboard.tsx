@@ -9,32 +9,56 @@ const Dashboard = () => {
     revenue: 0,
   });
   const [loading, setLoading] = useState(true);
+  interface Order {
+    order_id: number;
+    customer_id: number;
+    status: string;
+    total_amount: number;
+    order_date: number;
+    delivery_date: number;
+    address_id: string;
+  }
+
+  interface Customer {
+    customer_id: number;
+    customer_name: string;
+    customer_gender: string;
+    customer_phone: string;
+    customer_email: string;
+  }
+
+  const [recentOrders, setRecentOrders] = useState<Order[]>([]);
+  const [customers, setCustomers] = useState<Customer[]>([]);
+
   const API_BASE = import.meta.env.VITE_API_URL;
   useEffect(() => {
-    const test = async () => {
+    const fetchData = async () => {
       try {
         setLoading(true);
 
-        const res = await fetch(`${API_BASE}/api/admin/dashboard`, {
-          method: "GET",
-          headers: {
-            "Content-Type": "application/json",
-          },
-        });
+        // Lấy cả khách hàng và đơn hàng gần đây cùng lúc
+        const [customersRes, ordersRes, statsRes] = await Promise.all([
+          fetch(`${API_BASE}/api/admin/customer`).then(res => res.json()),
+          fetch(`${API_BASE}/api/admin/recent_orders`).then(res => res.json()),
+          fetch(`${API_BASE}/api/admin/dashboard`).then(res => res.json()),
+        ]);
 
-        if (!res.ok) {
-          throw new Error("Không thể tải dữ liệu dashboard");
-        }
-
-        const data = await res.json();
-        setStats(data);
+        setCustomers(customersRes);
+        setRecentOrders(
+          ordersRes
+            .map((o: any) => ({ ...o, customer_id: Number(o.customer_id) })) // ép kiểu customer_id về number
+            .sort((a: any, b: any) => new Date(b.order_date).getTime() - new Date(a.order_date).getTime()) // sort theo ngày giảm dần
+            .slice(0, 5)
+        );
+        setStats(statsRes);
       } catch (err) {
+        console.error("Lỗi khi fetch dashboard:", err);
       } finally {
         setLoading(false);
       }
     };
 
-    test();
+    fetchData();
   }, []);
 
   const formatVND = (v: number) =>
@@ -119,21 +143,21 @@ const Dashboard = () => {
             Đơn hàng gần đây
           </h2>
           <div className="space-y-3">
-            {[1, 2, 3, 4, 5].map((i) => (
+            {recentOrders.map((i) => (
               <div
-                key={i}
+                key={i.order_id}
                 className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
               >
                 <div>
                   <p className="font-medium text-gray-900">
-                    Đơn hàng #{1000 + i}
+                    Đơn hàng #{i.order_id}
                   </p>
-                  <p className="text-sm text-gray-500">Khách hàng {i}</p>
+                  <p className="text-sm text-gray-500">Khách hàng {customers.find(c => Number(c.customer_id) === Number(i.customer_id))?.customer_name}</p>
                 </div>
                 <div className="text-right">
-                  <p className="font-semibold text-gray-900">1.250.000đ</p>
+                  <p className="font-semibold text-gray-900">{formatVND(i.total_amount)}</p>
                   <span className="inline-block px-2 py-1 text-xs bg-green-100 text-green-700 rounded-full">
-                    Hoàn thành
+                    {i.status}
                   </span>
                 </div>
               </div>
