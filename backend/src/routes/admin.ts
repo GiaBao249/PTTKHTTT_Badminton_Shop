@@ -1,10 +1,13 @@
 import express from "express";
-import { registerDashBoardAdmin } from "./admin/dashboard";
-import { registerRecentOrders } from "./admin/recentOrders";
-import { registerGetCustomers } from "./admin/customer"; 
+import { registerDashBoardAdmin } from "./admin/getDashBoardStats";
+import { registerRecentOrders } from "./admin/getRecentOrders";
+import { registerGetCustomers } from "./admin/getCustomer"; 
 import { registerCreateProduct } from "./admin/createProduct";
-import  { registerGetProduct } from "./admin/getProduct";
+import { registerGetProduct } from "./admin/getProduct";
 import { registerGetProductItem } from "./admin/getProductItem";
+import { registerOrderRoutes } from "./admin/getOrders";
+import { registerGetOrdersDetail } from "./admin/getOrdersDetail";
+import { registerUpdateOrderStatus } from "./admin/updateOrderStatus";
 import { register } from "module";
 const router = express.Router();
 registerDashBoardAdmin(router);
@@ -13,5 +16,8 @@ registerGetCustomers(router);
 // registerCreateProduct(router);
 registerGetProduct(router);
 registerGetProductItem(router);
+registerOrderRoutes(router);
+registerGetOrdersDetail(router);
+registerUpdateOrderStatus(router);
 
 export default router;

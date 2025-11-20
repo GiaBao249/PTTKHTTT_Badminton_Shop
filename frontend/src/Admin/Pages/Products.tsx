@@ -52,7 +52,7 @@ const Products = () => {
       }
     }
     fetchProducts();
-  });
+  }, []);
 
   const formatVND = (v: number) =>
     new Intl.NumberFormat("vi-VN", {

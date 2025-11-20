@@ -2,7 +2,7 @@ import { Request, Response, Router } from "express";
 import { supabase } from "../../config/supabase";
 
 export function registerRecentOrders(router: Router) {
-    router.get("/recent_orders", async (req: Request, res: Response) => {
+    router.get("/getRecentOrders", async (req: Request, res: Response) => {
         try {
             const { data: orders, error: ordersError } = await supabase
             .from("orders")
@@ -14,8 +14,6 @@ export function registerRecentOrders(router: Router) {
                 throw ordersError;
             }
             
-            console.log(orders);
-
             return res.json(orders);
         } catch (error) {
             console.error("Dashboard error:", error);

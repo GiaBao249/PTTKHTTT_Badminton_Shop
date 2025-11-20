@@ -1,7 +1,7 @@
 import { Request, Response, Router } from "express";
 import { supabase } from "../../config/supabase";
 export function registerDashBoardAdmin(router: Router) {
-  router.get("/dashboard", async (req: Request, res: Response) => {
+  router.get("/getDashBoardStats", async (req: Request, res: Response) => {
     try {
       const { data: orders, error: ordersError } = await supabase
         .from("orders")
@@ -11,7 +11,7 @@ export function registerDashBoardAdmin(router: Router) {
         throw ordersError;
       }
       const totalOrders = orders?.length || 0;
-      const revenue =
+      const totalRevenue =
         orders
           ?.filter(
             (order) =>
@@ -41,7 +41,7 @@ export function registerDashBoardAdmin(router: Router) {
         totalOrders,
         totalCustomers,
         totalProducts,
-        revenue,
+        totalRevenue,
       };
 
       res.json(stats);

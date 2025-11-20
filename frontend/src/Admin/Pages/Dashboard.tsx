@@ -1,65 +1,30 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, createContext, useContext } from "react";
 import { ShoppingBag, Users, Package, TrendingUp } from "lucide-react";
+import { useProducts } from "../hook/useProducts";
+import { useOrders } from "../hook/useOrders";
+import { useProductItems } from "../hook/useProductItems";
+import { useCustomers } from "../hook/useCustomers";
+import { useRecentOrders } from "../hook/useRecentOrders";
+import { useDashBoard } from "../hook/useDashBoard";
+
 
 const Dashboard = () => {
-  const [stats, setStats] = useState({
+  const stats = useDashBoard().data || {
     totalOrders: 0,
     totalCustomers: 0,
     totalProducts: 0,
-    revenue: 0,
-  });
+    totalRevenue: 0,
+  };
   const [loading, setLoading] = useState(true);
-  interface Order {
-    order_id: number;
-    customer_id: number;
-    status: string;
-    total_amount: number;
-    order_date: number;
-    delivery_date: number;
-    address_id: string;
-  }
-
-  interface Customer {
-    customer_id: number;
-    customer_name: string;
-    customer_gender: string;
-    customer_phone: string;
-    customer_email: string;
-  }
-
-  const [recentOrders, setRecentOrders] = useState<Order[]>([]);
-  const [customers, setCustomers] = useState<Customer[]>([]);
-
-  const API_BASE = import.meta.env.VITE_API_URL;
+  
+  const recentOrders = useRecentOrders().data || [];
+  const customers = useCustomers().data || [];
+  
   useEffect(() => {
-    const fetchData = async () => {
-      try {
-        setLoading(true);
-
-        // Lấy cả khách hàng và đơn hàng gần đây cùng lúc
-        const [customersRes, ordersRes, statsRes] = await Promise.all([
-          fetch(`${API_BASE}/api/admin/customer`).then(res => res.json()),
-          fetch(`${API_BASE}/api/admin/recent_orders`).then(res => res.json()),
-          fetch(`${API_BASE}/api/admin/dashboard`).then(res => res.json()),
-        ]);
-
-        setCustomers(customersRes);
-        setRecentOrders(
-          ordersRes
-            .map((o: any) => ({ ...o, customer_id: Number(o.customer_id) })) // ép kiểu customer_id về number
-            .sort((a: any, b: any) => new Date(b.order_date).getTime() - new Date(a.order_date).getTime()) // sort theo ngày giảm dần
-            .slice(0, 5)
-        );
-        setStats(statsRes);
-      } catch (err) {
-        console.error("Lỗi khi fetch dashboard:", err);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchData();
-  }, []);
+    if (stats && recentOrders && customers) {
+      setLoading(false);
+    }
+  }, [stats, recentOrders, customers]);
 
   const formatVND = (v: number) =>
     new Intl.NumberFormat("vi-VN", {
@@ -91,7 +56,7 @@ const Dashboard = () => {
     },
     {
       title: "Doanh thu",
-      value: formatVND(stats.revenue),
+      value: formatVND(stats.totalRevenue),
       icon: TrendingUp,
       color: "bg-orange-500",
       change: "+15.3%",
