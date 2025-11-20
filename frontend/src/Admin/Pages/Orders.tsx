@@ -1,10 +1,16 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Search, Eye, Edit2, X } from "lucide-react";
 import {
   DialogViewDetails,
   DialogStatusUpdate,
   DialogDeleteConfirm,
 } from "../Components";
+import { useOrders } from "../hook/useOrders";
+import { useCustomers } from "../hook/useCustomers";
+import { useOrderDetail } from "../hook/useOrderDetail";
+import { useUpdateOrderStatus } from "../hook/useUpdateOrderStatus";
+import { useProducts } from "../hook/useProducts";
+import { useProductItems } from "../hook/useProductItems";
 
 const Orders = () => {
   const [searchTerm, setSearchTerm] = useState("");
@@ -13,49 +19,57 @@ const Orders = () => {
   const [openStatusUpdate, setOpenStatusUpdate] = useState(false);
   const [openCancelConfirm, setOpenCancelConfirm] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState<{
-    id: number;
-    customer: string;
-    date: string;
-    total: number;
+    order_id: number;
+    customer_id: number;
     status: string;
-    items: number;
+    total_amount: number;
+    order_date: number;
+    delivery_date: number;
+    address_id: string;
   } | null>(null);
   const [isUpdating, setIsUpdating] = useState(false);
   const [isCanceling, setIsCanceling] = useState(false);
-  const [orders, setOrders] = useState([
-    {
-      id: 1001,
-      customer: "Nguyễn Văn A",
-      date: "2024-01-15",
-      total: 2500000,
-      status: "Đã giao",
-      items: 3,
-    },
-    {
-      id: 1002,
-      customer: "Trần Thị B",
-      date: "2024-01-14",
-      total: 1800000,
-      status: "Đang giao",
-      items: 2,
-    },
-    {
-      id: 1003,
-      customer: "Lê Văn C",
-      date: "2024-01-13",
-      total: 3200000,
-      status: "Chờ xử lý",
-      items: 5,
-    },
-    {
-      id: 1004,
-      customer: "Phạm Thị D",
-      date: "2024-01-12",
-      total: 950000,
-      status: "Đã hủy",
-      items: 1,
-    },
-  ]);
+
+  interface Order {
+    order_id: number;
+    customer_id: number;
+    status: string;
+    total_amount: number;
+    order_date: number;
+    delivery_date: number;
+    address_id: string;
+  }
+
+  interface Product {
+    product_id: number;
+    supplier_id: number;
+    category_id: number;
+    product_name: string;
+    price: number;
+    description: string;
+    warranty_period: number;
+  }
+
+  interface ProductItem {
+      product_item_id: number;
+      product_id: number;
+      quantity: number;
+  }
+
+
+
+  const { data } = useOrders();
+  const [orders, setOrders] = useState<Order[]>(data || []);
+  const customers = useCustomers().data || [];
+  const updateOrderStatus = useUpdateOrderStatus();
+  const products = useProducts().data || [];
+  const productItems = useProductItems().data || [];
+
+  useEffect(() => {
+    if (data) {
+      setOrders(data);
+    }
+  }, [data]);
 
   const formatVND = (v: number) =>
     new Intl.NumberFormat("vi-VN", {
@@ -78,12 +92,42 @@ const Orders = () => {
     }
   };
 
+  const getConverseionStatus = (status: string) => {
+    switch (status) {
+      case "Delivered":
+        return "Đã giao";
+      case "Shipped":
+        return "Đang giao";
+      case "Pending":
+        return "Chờ xử lý";
+      case "Cancelled":
+        return "Đã hủy"; 
+      default:
+        return status
+    };
+  }
+
+  const getReverseStatus = (status: string) => {
+    switch (status) {
+        case "Đã giao":
+            return "Delivered";
+        case "Đang giao":
+            return "Shipped";
+        case "Chờ xử lý":
+            return "Pending";
+        case "Đã hủy":
+            return "Cancelled";
+        default:
+            return status;
+    }
+};
+
   const filteredOrders = orders.filter((order) => {
     const matchesSearch =
-      order.customer.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      order.id.toString().includes(searchTerm);
+      customers.find(c => c.customer_id === order.customer_id)?.customer_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      order.order_id.toString().includes(searchTerm);
     const matchesStatus =
-      statusFilter === "all" || order.status === statusFilter;
+      statusFilter === "all" || getConverseionStatus(order.status) === statusFilter;
     return matchesSearch && matchesStatus;
   });
 
@@ -102,17 +146,22 @@ const Orders = () => {
     setIsUpdating(true);
     // TODO: Gọi API cập nhật trạng thái
     const nextStatus =
-      selectedOrder.status === "Chờ xử lý"
+      getConverseionStatus(selectedOrder.status) === "Chờ xử lý"
         ? "Đang giao"
-        : selectedOrder.status === "Đang giao"
+        : getConverseionStatus(selectedOrder.status) === "Đang giao"
         ? "Đã giao"
         : "Đã giao";
-    await new Promise((resolve) => setTimeout(resolve, 1500));
-    setOrders(
-      orders.map((o) =>
-        o.id === selectedOrder.id ? { ...o, status: nextStatus } : o
-      )
-    );
+    console.log('Cập nhật trạng thái thành:', nextStatus);
+    try {
+        await updateOrderStatus.mutateAsync({
+            order_id: selectedOrder.order_id,
+            status: getReverseStatus(nextStatus)
+        });
+        console.log('Cập nhật trạng thái thành công');
+    } catch (error) {
+        // Hiển thị thông báo lỗi
+        console.error('Lỗi cập nhật:', error);
+    }
     setIsUpdating(false);
     setOpenStatusUpdate(false);
     setSelectedOrder(null);
@@ -127,12 +176,17 @@ const Orders = () => {
     if (!selectedOrder) return;
     setIsCanceling(true);
     // TODO: Gọi API hủy đơn hàng
-    await new Promise((resolve) => setTimeout(resolve, 1500));
-    setOrders(
-      orders.map((o) =>
-        o.id === selectedOrder.id ? { ...o, status: "Đã hủy" } : o
-      )
-    );
+    // await new Promise((resolve) => setTimeout(resolve, 1500));
+    try {
+        await updateOrderStatus.mutateAsync({
+            order_id: selectedOrder.order_id,
+            status: getReverseStatus("Đã hủy")
+        });
+        console.log('Cập nhật trạng thái thành công');
+    } catch (error) {
+        // Hiển thị thông báo lỗi
+        console.error('Lỗi cập nhật:', error);
+    }
     setIsCanceling(false);
     setOpenCancelConfirm(false);
     setSelectedOrder(null);
@@ -148,6 +202,69 @@ const Orders = () => {
         return "Đã giao";
     }
   };
+
+  function OrderProductCount({ orderId }: { orderId: number }) {
+    const { data: orderDetails } = useOrderDetail(orderId);
+    return <span>{orderDetails?.length || 0} sản phẩm</span>;
+  }
+
+  function OrderProductList({ orderId, products, productItems }: { orderId: number; products: Product[]; productItems: ProductItem[] }) {
+    const { data: orderDetails } = useOrderDetail(orderId);
+    console.log('🔍 Order details for orderId', orderId, ':', orderDetails);
+    if (!orderDetails || orderDetails.length === 0) {
+      return <div className="text-sm text-gray-500 text-center py-2">Không có chi tiết đơn hàng</div>;
+    }
+    return (
+      <div className="space-y-2">
+        {orderDetails.map((od: any, idx: number) => {
+          const pi = productItems.find((p: ProductItem) => Number(p.product_item_id) === Number(od.product_item_id));
+          const product = pi ? products.find((pr: Product) => Number(pr.product_id) === Number(pi.product_id)) : undefined;
+          const name = product?.product_name;
+          const unitPrice = product?.price;
+          const lineAmount = typeof od.amount === "number" ? od.amount : (typeof unitPrice === "number" ? unitPrice * od.quantity : undefined);
+          return (
+        <div key={`${od.product_item_id}-${idx}`} className="p-3 bg-gray-50 rounded-lg">
+          <div className="flex items-start justify-between">
+            <div className="flex-1">
+              <p className="font-medium text-gray-900">{name}</p>
+              <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-gray-600">
+                <span className="px-2 py-1 bg-gray-100 rounded">ID: #{product?.product_id ?? "-"}</span>
+                <span className="px-2 py-1 bg-gray-100 rounded">Mục: #{od.product_item_id}</span>
+                <span className="px-2 py-1 bg-gray-100 rounded">Danh mục: {product?.category_id ?? "-"}</span>
+              </div>
+              <div className="mt-1 text-xs text-gray-600">
+                <span>Nhà cung cấp: {product?.supplier_id ?? "-"}</span>
+                <span className="mx-2">•</span>
+                <span>Bảo hành: {product?.warranty_period != null ? `${product.warranty_period} tháng` : "-"}</span>
+                <span className="mx-2">•</span>
+                <span>Tồn kho: {pi?.quantity != null ? pi.quantity : "-"}</span>
+              </div>
+              {product?.description && (
+                <p className="mt-1 text-xs text-gray-500">{product.description}</p>
+              )}
+            </div>
+            <div className="text-right">
+              <div className="text-xs text-gray-500">Đơn giá</div>
+              <div className="font-medium text-gray-900">
+                {typeof unitPrice === "number" ? formatVND(unitPrice) : "-"}
+              </div>
+            </div>
+          </div>
+          <div className="mt-2 flex items-center justify-between">
+            <p className="text-sm text-gray-500">Số lượng: {od.quantity}</p>
+            <div className="text-right">
+              <div className="text-xs text-gray-500">Thành tiền</div>
+              <p className="font-semibold text-gray-900">
+                {typeof lineAmount === "number" ? formatVND(lineAmount) : (typeof unitPrice === "number" ? formatVND(unitPrice * od.quantity) : "-")}
+              </p>
+            </div>
+          </div>
+        </div>
+      );
+        })}
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -217,31 +334,31 @@ const Orders = () => {
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
               {filteredOrders.map((order) => (
-                <tr key={order.id} className="hover:bg-gray-50">
+                <tr key={order.order_id} className="hover:bg-gray-50">
                   <td className="px-6 py-4 whitespace-nowrap">
                     <p className="text-sm font-medium text-gray-900">
-                      #{order.id}
+                      #{order.order_id}
                     </p>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <p className="text-sm text-gray-900">{order.customer}</p>
+                    <p className="text-sm text-gray-900">{customers.find(c => c.customer_id === order.customer_id)?.customer_name}</p>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {order.date}
+                    {order.order_date}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {order.items} sản phẩm
+                    <OrderProductCount orderId={order.order_id} />
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-gray-900">
-                    {formatVND(order.total)}
+                    {formatVND(order.total_amount)}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <span
                       className={`inline-block px-2 py-1 text-xs rounded-full ${getStatusColor(
-                        order.status
+                        getConverseionStatus(order.status)
                       )}`}
                     >
-                      {order.status}
+                      {getConverseionStatus(order.status)}
                     </span>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
@@ -253,7 +370,7 @@ const Orders = () => {
                       >
                         <Eye size={16} />
                       </button>
-                      {order.status === "Chờ xử lý" && (
+                      {getConverseionStatus(order.status) === "Chờ xử lý" && (
                         <button
                           onClick={() => handleCancelClick(order)}
                           className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
@@ -262,8 +379,8 @@ const Orders = () => {
                           <X size={16} />
                         </button>
                       )}
-                      {order.status !== "Đã giao" &&
-                        order.status !== "Đã hủy" && (
+                      {getConverseionStatus(order.status) !== "Đã giao" &&
+                        getConverseionStatus(order.status) !== "Đã hủy" && (
                           <button
                             onClick={() => handleStatusUpdate(order)}
                             className="p-2 text-green-600 hover:bg-green-50 rounded-lg transition-colors"
@@ -315,40 +432,40 @@ const Orders = () => {
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <p className="text-sm text-gray-500 mb-1">Mã đơn hàng</p>
-                <p className="font-medium text-gray-900">#{selectedOrder.id}</p>
+                <p className="font-medium text-gray-900">#{selectedOrder.order_id}</p>
               </div>
               <div>
                 <p className="text-sm text-gray-500 mb-1">Khách hàng</p>
                 <p className="font-medium text-gray-900">
-                  {selectedOrder.customer}
+                  {customers.find(c => c.customer_id == selectedOrder.customer_id)?.customer_name}
                 </p>
               </div>
               <div>
                 <p className="text-sm text-gray-500 mb-1">Ngày đặt</p>
                 <p className="font-medium text-gray-900">
-                  {selectedOrder.date}
+                  {selectedOrder.order_date}
                 </p>
               </div>
               <div>
                 <p className="text-sm text-gray-500 mb-1">Số lượng sản phẩm</p>
                 <p className="font-medium text-gray-900">
-                  {selectedOrder.items} sản phẩm
+                  <OrderProductCount orderId={selectedOrder.order_id} />
                 </p>
               </div>
               <div>
                 <p className="text-sm text-gray-500 mb-1">Tổng tiền</p>
                 <p className="font-medium text-gray-900">
-                  {formatVND(selectedOrder.total)}
+                  {formatVND(selectedOrder.total_amount)}
                 </p>
               </div>
               <div>
                 <p className="text-sm text-gray-500 mb-1">Trạng thái</p>
                 <span
                   className={`inline-block px-3 py-1 text-sm rounded-full ${getStatusColor(
-                    selectedOrder.status
+                    getConverseionStatus(selectedOrder.status)
                   )}`}
                 >
-                  {selectedOrder.status}
+                  {getConverseionStatus(selectedOrder.status)}
                 </span>
               </div>
             </div>
@@ -357,15 +474,7 @@ const Orders = () => {
                 Danh sách sản phẩm
               </h3>
               <div className="space-y-2">
-                <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                  <div>
-                    <p className="font-medium text-gray-900">Sản phẩm mẫu</p>
-                    <p className="text-sm text-gray-500">Số lượng: 2</p>
-                  </div>
-                  <p className="font-medium text-gray-900">
-                    {formatVND(500000)}
-                  </p>
-                </div>
+                <OrderProductList orderId={selectedOrder.order_id} products={products} productItems={productItems} />
               </div>
             </div>
           </div>
@@ -396,7 +505,7 @@ const Orders = () => {
         message="Bạn có chắc chắn muốn hủy đơn hàng này? Hành động này không thể hoàn tác."
         itemName={
           selectedOrder
-            ? `Đơn hàng #${selectedOrder.id} - ${selectedOrder.customer}`
+            ? `Đơn hàng #${selectedOrder.order_id} - ${customers.find(c => c.customer_id == selectedOrder.customer_id)?.customer_name}`
             : undefined
         }
         isLoading={isCanceling}

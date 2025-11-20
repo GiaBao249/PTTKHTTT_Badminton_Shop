@@ -1,26 +1,30 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, createContext, useContext } from "react";
 import { ShoppingBag, Users, Package, TrendingUp } from "lucide-react";
+import { useProducts } from "../hook/useProducts";
+import { useOrders } from "../hook/useOrders";
+import { useProductItems } from "../hook/useProductItems";
+import { useCustomers } from "../hook/useCustomers";
+import { useRecentOrders } from "../hook/useRecentOrders";
+import { useDashBoard } from "../hook/useDashBoard";
+
 
 const Dashboard = () => {
-  const [stats, setStats] = useState({
+  const stats = useDashBoard().data || {
     totalOrders: 0,
     totalCustomers: 0,
     totalProducts: 0,
-    revenue: 0,
-  });
+    totalRevenue: 0,
+  };
   const [loading, setLoading] = useState(true);
-
+  
+  const recentOrders = useRecentOrders().data || [];
+  const customers = useCustomers().data || [];
+  
   useEffect(() => {
-    setTimeout(() => {
-      setStats({
-        totalOrders: 1248,
-        totalCustomers: 856,
-        totalProducts: 342,
-        revenue: 125000000,
-      });
+    if (stats && recentOrders && customers) {
       setLoading(false);
-    }, 500);
-  }, []);
+    }
+  }, [stats, recentOrders, customers]);
 
   const formatVND = (v: number) =>
     new Intl.NumberFormat("vi-VN", {
@@ -52,7 +56,7 @@ const Dashboard = () => {
     },
     {
       title: "Doanh thu",
-      value: formatVND(stats.revenue),
+      value: formatVND(stats.totalRevenue),
       icon: TrendingUp,
       color: "bg-orange-500",
       change: "+15.3%",
@@ -104,21 +108,21 @@ const Dashboard = () => {
             Đơn hàng gần đây
           </h2>
           <div className="space-y-3">
-            {[1, 2, 3, 4, 5].map((i) => (
+            {recentOrders.map((i) => (
               <div
-                key={i}
+                key={i.order_id}
                 className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
               >
                 <div>
                   <p className="font-medium text-gray-900">
-                    Đơn hàng #{1000 + i}
+                    Đơn hàng #{i.order_id}
                   </p>
-                  <p className="text-sm text-gray-500">Khách hàng {i}</p>
+                  <p className="text-sm text-gray-500">Khách hàng {customers.find(c => Number(c.customer_id) === Number(i.customer_id))?.customer_name}</p>
                 </div>
                 <div className="text-right">
-                  <p className="font-semibold text-gray-900">1.250.000đ</p>
+                  <p className="font-semibold text-gray-900">{formatVND(i.total_amount)}</p>
                   <span className="inline-block px-2 py-1 text-xs bg-green-100 text-green-700 rounded-full">
-                    Hoàn thành
+                    {i.status}
                   </span>
                 </div>
               </div>
