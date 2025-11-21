@@ -39,7 +39,6 @@ export function registerMyOrdersRoutes(router: Router) {
           .select(`order_id , product_item_id , quantity`)
           .in("order_id", fullIdToMyOrder);
         if (orderDetailError) {
-          // console.error("Error fetching order details:", orderDetailError);
           return res.status(500).json({
             error: orderDetailError.message || "Lỗi khi lấy chi tiết đơn hàng",
           });
@@ -82,7 +81,7 @@ export function registerMyOrdersRoutes(router: Router) {
         });
         return res.json(ordersWithDetails);
       } catch (error) {
-        // console.error("Unexpected error:", error);
+        console.error("Lỗi khi lấy đơn hàng:", error);
         return res.status(500).json({ error: "Lỗi server" });
       }
     }

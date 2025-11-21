@@ -24,6 +24,7 @@ export function registerDetailRoutes(router: Router) {
       `
         )
         .eq("product_id", productId)
+        .or("is_deleted.is.null,is_deleted.eq.false")
         .single();
       if (productError) throw productError;
       if (!product) return res.status(404).json({ error: "Product not found" });

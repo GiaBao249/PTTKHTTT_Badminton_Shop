@@ -64,13 +64,6 @@ export function registerCheckoutRoutes(router: Router) {
           finalAddressId = newAddress?.address_id;
         }
         const orderStatus = "Pending";
-        console.log("Attempting to create order with status:", orderStatus);
-        console.log("Order data:", {
-          customer_id: customerId,
-          address_id: finalAddressId,
-          status: orderStatus,
-          total_amount: total_amount,
-        });
         const { data: order, error: orderError } = await supabase
           .from("orders")
           .insert({
@@ -104,49 +97,129 @@ export function registerCheckoutRoutes(router: Router) {
           .from("orderdetail")
           .insert(orderDetails);
         if (detailError) throw detailError;
-        for (const item of cart_items) {
-          const productItem = productItems?.find(
-            (p: any) => p.product_item_id === item.product_item_id
-          );
-          if (productItem) {
-            const { error: updateError } = await supabase
-              .from("product_item")
-              .update({ quantity: productItem.quantity - item.quantity })
-              .eq("product_item_id", item.product_item_id);
-            if (updateError) {
-              throw updateError;
+
+        // Nếu thanh toán bằng VNPay, chưa trừ inventory và chưa xóa cart
+        // Chỉ trừ inventory và xóa cart khi thanh toán thành công (trong IPN callback)
+        if (payment_method === "cod") {
+          // COD: Trừ inventory ngay và xóa cart
+          for (const item of cart_items) {
+            const productItem = productItems?.find(
+              (p: any) => p.product_item_id === item.product_item_id
+            );
+            if (productItem) {
+              const { error: updateError } = await supabase
+                .from("product_item")
+                .update({ quantity: productItem.quantity - item.quantity })
+                .eq("product_item_id", item.product_item_id);
+              if (updateError) {
+                throw updateError;
+              }
             }
           }
-        }
-        const { data: cart, error: cartError } = await supabase
-          .from("cart")
-          .select("cart_id")
-          .eq("customer_id", customerId)
-          .single();
 
-        if (cart && !cartError && cart.cart_id) {
-          const checkedOutProductIds = cart_items.map(
-            (item: any) => item.product_item_id
-          );
+          const { data: cart, error: cartError } = await supabase
+            .from("cart")
+            .select("cart_id")
+            .eq("customer_id", customerId)
+            .single();
 
-          const { error: deleteCartError } = await supabase
-            .from("cartitems")
-            .delete()
-            .eq("cart_id", cart.cart_id)
-            .in("product_item_id", checkedOutProductIds);
-
-          if (deleteCartError) {
-            console.error(
-              "Error deleting checked out cart items:",
-              deleteCartError
+          if (cart && !cartError && cart.cart_id) {
+            const checkedOutProductIds = cart_items.map(
+              (item: any) => item.product_item_id
             );
+
+            const { error: deleteCartError } = await supabase
+              .from("cartitems")
+              .delete()
+              .eq("cart_id", cart.cart_id)
+              .in("product_item_id", checkedOutProductIds);
+
+            if (deleteCartError) {
+              console.error(
+                "Error deleting checked out cart items:",
+                deleteCartError
+              );
+            }
           }
+
+          return res.json({
+            success: true,
+            order_id: order.order_id,
+            message: "Đặt hàng thành công",
+            payment_method: "cod",
+          });
+        } else if (payment_method === "vnpay") {
+          // VNPay: Trả về payment URL, chưa trừ inventory
+          // Frontend sẽ redirect đến VNPay
+          // Inventory sẽ được trừ trong IPN callback khi thanh toán thành công
+          return res.json({
+            success: true,
+            order_id: order.order_id,
+            message: "Đang chuyển hướng đến trang thanh toán VNPay",
+            payment_method: "vnpay",
+            requires_payment: true,
+          });
+        } else if (payment_method === "vietqr") {
+          // VietQR: Trả về QR code, chưa trừ inventory
+          // Frontend sẽ hiển thị QR code để user quét và thanh toán
+          // Inventory sẽ được trừ khi admin xác nhận thanh toán hoặc webhook
+          return res.json({
+            success: true,
+            order_id: order.order_id,
+            message: "Vui lòng quét mã QR để thanh toán",
+            payment_method: "vietqr",
+            requires_payment: true,
+          });
+        } else {
+          // Payment method khác (có thể là "card" - giữ logic hiện tại)
+          // Trừ inventory và xóa cart như COD
+          for (const item of cart_items) {
+            const productItem = productItems?.find(
+              (p: any) => p.product_item_id === item.product_item_id
+            );
+            if (productItem) {
+              const { error: updateError } = await supabase
+                .from("product_item")
+                .update({ quantity: productItem.quantity - item.quantity })
+                .eq("product_item_id", item.product_item_id);
+              if (updateError) {
+                throw updateError;
+              }
+            }
+          }
+
+          const { data: cart, error: cartError } = await supabase
+            .from("cart")
+            .select("cart_id")
+            .eq("customer_id", customerId)
+            .single();
+
+          if (cart && !cartError && cart.cart_id) {
+            const checkedOutProductIds = cart_items.map(
+              (item: any) => item.product_item_id
+            );
+
+            const { error: deleteCartError } = await supabase
+              .from("cartitems")
+              .delete()
+              .eq("cart_id", cart.cart_id)
+              .in("product_item_id", checkedOutProductIds);
+
+            if (deleteCartError) {
+              console.error(
+                "Error deleting checked out cart items:",
+                deleteCartError
+              );
+            }
+          }
+
+          return res.json({
+            success: true,
+            order_id: order.order_id,
+            message: "Đặt hàng thành công",
+            payment_method: payment_method,
+          });
         }
-        return res.json({
-          success: true,
-          order_id: order.order_id,
-          message: "Đặt hàng thành công",
-        });
       } catch (error: any) {
         console.error("Checkout error:", error);
         return res.status(500).json({

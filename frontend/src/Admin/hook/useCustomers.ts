@@ -6,6 +6,9 @@ interface Customer {
     customer_gender: string;
     customer_phone: string;
     customer_email: string;
+    created_at?: string;
+    total_orders?: number;
+    total_spent?: number;
 }
 
 const API_BASE = import.meta.env.VITE_API_URL;

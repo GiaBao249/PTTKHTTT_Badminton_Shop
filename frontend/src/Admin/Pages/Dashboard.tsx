@@ -6,7 +6,7 @@ import { useProductItems } from "../hook/useProductItems";
 import { useCustomers } from "../hook/useCustomers";
 import { useRecentOrders } from "../hook/useRecentOrders";
 import { useDashBoard } from "../hook/useDashBoard";
-
+import { useTopSellingProducts } from "../hook/useTopSellingProducts";
 
 const Dashboard = () => {
   const stats = useDashBoard().data || {
@@ -16,10 +16,12 @@ const Dashboard = () => {
     totalRevenue: 0,
   };
   const [loading, setLoading] = useState(true);
-  
+
   const recentOrders = useRecentOrders().data || [];
   const customers = useCustomers().data || [];
-  
+  const { data: topSellingProducts, isLoading: isLoadingTopProducts } =
+    useTopSellingProducts(5);
+
   useEffect(() => {
     if (stats && recentOrders && customers) {
       setLoading(false);
@@ -117,10 +119,19 @@ const Dashboard = () => {
                   <p className="font-medium text-gray-900">
                     Đơn hàng #{i.order_id}
                   </p>
-                  <p className="text-sm text-gray-500">Khách hàng {customers.find(c => Number(c.customer_id) === Number(i.customer_id))?.customer_name}</p>
+                  <p className="text-sm text-gray-500">
+                    Khách hàng{" "}
+                    {
+                      customers.find(
+                        (c) => Number(c.customer_id) === Number(i.customer_id)
+                      )?.customer_name
+                    }
+                  </p>
                 </div>
                 <div className="text-right">
-                  <p className="font-semibold text-gray-900">{formatVND(i.total_amount)}</p>
+                  <p className="font-semibold text-gray-900">
+                    {formatVND(i.total_amount)}
+                  </p>
                   <span className="inline-block px-2 py-1 text-xs bg-green-100 text-green-700 rounded-full">
                     {i.status}
                   </span>
@@ -134,27 +145,64 @@ const Dashboard = () => {
           <h2 className="text-lg font-semibold text-gray-900 mb-4">
             Sản phẩm bán chạy
           </h2>
-          <div className="space-y-3">
-            {[1, 2, 3, 4, 5].map((i) => (
-              <div
-                key={i}
-                className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
-              >
-                <div className="flex items-center gap-3">
-                  <div className="w-12 h-12 bg-gray-200 rounded-lg" />
-                  <div>
-                    <p className="font-medium text-gray-900">Sản phẩm {i}</p>
-                    <p className="text-sm text-gray-500">
-                      {50 + i * 10} đã bán
-                    </p>
+          {isLoadingTopProducts ? (
+            <div className="space-y-3">
+              {[1, 2, 3, 4, 5].map((i) => (
+                <div
+                  key={i}
+                  className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="w-12 h-12 bg-gray-200 rounded-lg animate-pulse" />
+                    <div>
+                      <div className="h-4 w-32 bg-gray-200 rounded animate-pulse mb-2" />
+                      <div className="h-3 w-24 bg-gray-200 rounded animate-pulse" />
+                    </div>
                   </div>
+                  <div className="h-4 w-20 bg-gray-200 rounded animate-pulse" />
                 </div>
-                <p className="font-semibold text-indigo-600">
-                  {formatVND((500000 + i * 100000) / 100)}
-                </p>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          ) : topSellingProducts && topSellingProducts.length > 0 ? (
+            <div className="space-y-3">
+              {topSellingProducts.map((product) => (
+                <div
+                  key={product.product_id}
+                  className="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="w-12 h-12 rounded-lg bg-gray-100 overflow-hidden flex items-center justify-center">
+                      {product.thumbnail ? (
+                        <img
+                          src={product.thumbnail}
+                          alt={product.product_name}
+                          className="w-full h-full object-cover"
+                          loading="lazy"
+                        />
+                      ) : (
+                        <Package size={20} className="text-gray-400" />
+                      )}
+                    </div>
+                    <div>
+                      <p className="font-medium text-gray-900">
+                        {product.product_name}
+                      </p>
+                      <p className="text-sm text-gray-500">
+                        {product.sold_quantity.toLocaleString()} đã bán
+                      </p>
+                    </div>
+                  </div>
+                  <p className="font-semibold text-indigo-600">
+                    {formatVND(product.price)}
+                  </p>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="py-8 text-center text-gray-500">
+              Chưa có sản phẩm bán chạy
+            </div>
+          )}
         </div>
       </div>
     </div>

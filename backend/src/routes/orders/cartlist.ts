@@ -29,6 +29,7 @@ export function registerCartRoutes(router: Router) {
               product_id,
               product_name,
               price,
+              is_deleted,
               category:category_id(
                 category_id,
                 category_name
@@ -39,7 +40,54 @@ export function registerCartRoutes(router: Router) {
           )
           .eq("cart_id", cart.cart_id);
         if (error) throw error;
-        return res.json(data || []);
+        
+        // Filter out items with deleted products
+        const filteredData = (data || []).filter((item: any) => {
+          const product = item.product_item?.product;
+          return product && (product.is_deleted === false || product.is_deleted === null);
+        });
+        
+        // Get product IDs to fetch thumbnails
+        const productIds = filteredData
+          .map((item: any) => item.product_item?.product?.product_id)
+          .filter(Boolean);
+        
+        if (productIds.length > 0) {
+          const { data: productItems, error: itemsError } = await supabase
+            .from("product_item")
+            .select(
+              `
+              product_id,
+              product_image (
+                image_filename
+              )
+            `
+            )
+            .in("product_id", productIds);
+          
+          const thumbnailMap = new Map<number, string>();
+          if (!itemsError && productItems) {
+            (productItems ?? []).forEach((item: any) => {
+              const firstImage = item.product_image?.[0]?.image_filename;
+              if (item.product_id && firstImage && !thumbnailMap.has(item.product_id)) {
+                thumbnailMap.set(item.product_id, firstImage);
+              }
+            });
+          }
+          
+          // Add thumbnail to each cart item
+          const enrichedData = filteredData.map((item: any) => {
+            const productId = item.product_item?.product?.product_id;
+            if (productId && item.product_item?.product) {
+              item.product_item.product.thumbnail = thumbnailMap.get(productId) ?? null;
+            }
+            return item;
+          });
+          
+          return res.json(enrichedData);
+        }
+        
+        return res.json(filteredData);
       } catch (err: any) {
         return res.status(400).json({ error: err.message || "Lỗi server" });
       }
@@ -104,6 +152,7 @@ export function registerCartRoutes(router: Router) {
           .from("product")
           .select("price")
           .eq("product_id", productItem.product_id)
+          .or("is_deleted.is.null,is_deleted.eq.false")
           .single();
 
         if (!product) throw new Error("Không tìm thấy thông tin sản phẩm");
@@ -201,6 +250,7 @@ export function registerCartRoutes(router: Router) {
           .from("product")
           .select("price")
           .eq("product_id", productItem.product_id)
+          .or("is_deleted.is.null,is_deleted.eq.false")
           .single();
 
         if (!product) throw new Error("Không tìm thấy thông tin sản phẩm");

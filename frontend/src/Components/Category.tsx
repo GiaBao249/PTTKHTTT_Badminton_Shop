@@ -1,14 +1,18 @@
-import img1 from "../assets/c1.jpg";
+import img1 from "../assets/c5.jpg";
+import img2 from "../assets/c6.jpg";
+import img3 from "../assets/c7.png";
+import img4 from "../assets/c9.jpg";
+import img5 from "../assets/c10.png";
 const Category = () => {
   const categories = [
     {
       title: "Vợt cầu lông",
-      img: img1,
+      img: img4,
       subtitle: "Vợt chất lượng cao, chuyên nghiệp",
     },
     {
       title: "Giày cầu lông",
-      img: img1,
+      img: img5,
       subtitle: "Thoải mái, êm ái, linh hoạt, bao vệ đôi chân",
     },
     {
@@ -18,12 +22,12 @@ const Category = () => {
     },
     {
       title: "Áo cầu lông",
-      img: img1,
+      img: img2,
       subtitle: "Thoải mái, dễ chịu, thoáng mát",
     },
     {
       title: "Phụ kiện cầu lông",
-      img: img1,
+      img: img3,
       subtitle: "Túi xách, bình nước, các vật dụng đi kèm ...",
     },
   ];

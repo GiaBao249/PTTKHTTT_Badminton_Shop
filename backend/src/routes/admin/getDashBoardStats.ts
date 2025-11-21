@@ -30,7 +30,8 @@ export function registerDashBoardAdmin(router: Router) {
 
       const { data: products, error: productsError } = await supabase
         .from("product")
-        .select("product_id");
+        .select("product_id")
+        .or("is_deleted.is.null,is_deleted.eq.false");
       if (productsError) {
         console.error("Error fetching products:", productsError);
         throw productsError;

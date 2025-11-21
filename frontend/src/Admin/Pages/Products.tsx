@@ -1,11 +1,20 @@
-import { useEffect, useState } from "react";
-import { Plus, Search, Edit, Trash2 } from "lucide-react";
-import { Dialog, DialogEditProduct, DialogDeleteConfirm } from "../Components";
+import { useState } from "react";
+import { Search, Edit, Trash2 } from "lucide-react";
+import { DialogEditProduct, DialogDeleteConfirm } from "../Components";
+import { useProducts } from "../hook/useProducts";
+import { useProductItems } from "../hook/useProductItems";
+import { useCategories } from "../hook/useCategories";
+import { useQueryClient } from "@tanstack/react-query";
+import { toast } from "react-toastify";
+
 const Products = () => {
   const [searchTerm, setSearchTerm] = useState("");
-  const [openAddProducts, setOpenAddProduct] = useState(false);
+  const [selectedCategoryId, setSelectedCategoryId] = useState<number | "">("");
   const [openEditProduct, setOpenEditProduct] = useState(false);
   const [openDeleteConfirm, setOpenDeleteConfirm] = useState(false);
+  const [isUpdating, setIsUpdating] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
   const [selectedProduct, setSelectedProduct] = useState<{
     product_id: number;
     supplier_id: number;
@@ -16,43 +25,22 @@ const Products = () => {
     warranty_period: number;
   } | null>(null);
 
-  interface Product {
-    product_id: number;
-    supplier_id: number;
-    category_id: number;
-    product_name: string;
-    price: number;
-    description: string;
-    warranty_period: number;
-  }
-
-  interface ProductItem {
-    product_item_id: number;
-    product_id: number;
-    quantity: number;
-  }
-  
   const [isDeleting, setIsDeleting] = useState(false);
-  const [products, setProducts] = useState<Product[]>([]);
-  const [productsItem, setProductItem] = useState<ProductItem[]>([]);
 
-  const API_BASE = import.meta.env.VITE_API_URL
-  useEffect(() => {
-    const fetchProducts = async () => {
-      try {
-        const [productsRes, productItemRes] = await Promise.all([
-          fetch(`${API_BASE}/api/admin/getProducts`).then(res => res.json()),
-          fetch(`${API_BASE}/api/admin/getProductsItem`).then(res => res.json()),
-        ]);
-        
-        setProducts(productsRes);
-        setProductItem(productItemRes);
-      } catch (error) {
-        console.error("Lỗi khi fetch sản phẩm:", error);
-      }
-    }
-    fetchProducts();
-  }, []);
+  const {
+    data: productsData,
+    refetch: refetchProducts,
+    isLoading,
+    error,
+  } = useProducts();
+  const { data: productItemsData, refetch: refetchProductItems } =
+    useProductItems();
+  const { data: categoriesData } = useCategories();
+  const queryClient = useQueryClient();
+
+  const products = productsData || [];
+  const productsItem = productItemsData || [];
+  const categories = categoriesData || [];
 
   const formatVND = (v: number) =>
     new Intl.NumberFormat("vi-VN", {
@@ -60,9 +48,23 @@ const Products = () => {
       currency: "VND",
     }).format(v);
 
-  const filteredProducts = products.filter((p) =>
-    p.product_name.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredProducts = products.filter((p) => {
+    const matchesSearch = p.product_name
+      .toLowerCase()
+      .includes(searchTerm.toLowerCase());
+    const matchesCategory =
+      !selectedCategoryId || p.category_id === selectedCategoryId;
+    return matchesSearch && matchesCategory;
+  });
+
+  const totalPages = Math.ceil(filteredProducts.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const paginatedProducts = filteredProducts.slice(startIndex, endIndex);
+
+  const handleFilterChange = () => {
+    setCurrentPage(1);
+  };
 
   const handleEdit = (product: (typeof products)[0]) => {
     setSelectedProduct(product);
@@ -77,12 +79,82 @@ const Products = () => {
   const handleDeleteConfirm = async () => {
     if (!selectedProduct) return;
     setIsDeleting(true);
-    // TODO: Gọi API xóa sản phẩm
-    await new Promise((resolve) => setTimeout(resolve, 1500));
-    setProducts(products.filter((p) => p.product_id !== selectedProduct.product_id));
-    setIsDeleting(false);
-    setOpenDeleteConfirm(false);
-    setSelectedProduct(null);
+    try {
+      const API_BASE = import.meta.env.VITE_API_URL;
+      const response = await fetch(
+        `${API_BASE}/api/admin/deleteProduct/${selectedProduct.product_id}`,
+        {
+          method: "DELETE",
+        }
+      );
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || "Không thể xóa sản phẩm");
+      }
+
+      toast.success("Xóa sản phẩm thành công!");
+      setOpenDeleteConfirm(false);
+      setSelectedProduct(null);
+      queryClient.invalidateQueries({ queryKey: ["products"] });
+      queryClient.invalidateQueries({ queryKey: ["productItems"] });
+      await Promise.all([refetchProducts(), refetchProductItems()]);
+    } catch (error: any) {
+      toast.warning(error.message || "Có lỗi xảy ra khi xóa sản phẩm");
+      console.error("Error deleting product:", error);
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  const handleUpdateProduct = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    if (!selectedProduct) return;
+
+    const formData = new FormData(e.currentTarget);
+    const product_name = formData.get("product_name") as string;
+    const category_id = Number(formData.get("category_id"));
+    const price = Number(formData.get("price"));
+
+    if (!product_name || !category_id || !price || price <= 0) {
+      toast.warning("Vui lòng điền đầy đủ thông tin hợp lệ");
+      return;
+    }
+
+    setIsUpdating(true);
+    try {
+      const API_BASE = import.meta.env.VITE_API_URL;
+      const response = await fetch(
+        `${API_BASE}/api/admin/updateProduct/${selectedProduct.product_id}`,
+        {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            product_name,
+            category_id,
+            price,
+          }),
+        }
+      );
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || "Không thể cập nhật sản phẩm");
+      }
+
+      toast.success("Cập nhật sản phẩm thành công!");
+      setOpenEditProduct(false);
+      setSelectedProduct(null);
+      queryClient.invalidateQueries({ queryKey: ["products"] });
+      await refetchProducts();
+    } catch (error: any) {
+      toast.warning(error.message || "Có lỗi xảy ra khi cập nhật sản phẩm");
+      console.error("Error updating product:", error);
+    } finally {
+      setIsUpdating(false);
+    }
   };
 
   return (
@@ -94,13 +166,6 @@ const Products = () => {
             Quản lý danh sách sản phẩm trong cửa hàng
           </p>
         </div>
-        <button
-          onClick={() => setOpenAddProduct(true)}
-          className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
-        >
-          <Plus size={20} />
-          Thêm sản phẩm
-        </button>
       </div>
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
         <div className="flex items-center gap-4">
@@ -113,16 +178,29 @@ const Products = () => {
               type="text"
               placeholder="Tìm kiếm sản phẩm..."
               value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
+              onChange={(e) => {
+                setSearchTerm(e.target.value);
+                handleFilterChange();
+              }}
               className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
             />
           </div>
-          <select className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
-            <option>Tất cả danh mục</option>
-            <option>Vợt</option>
-            <option>Quần áo</option>
-            <option>Giày</option>
-            <option>Phụ kiện</option>
+          <select
+            value={selectedCategoryId}
+            onChange={(e) => {
+              setSelectedCategoryId(
+                e.target.value === "" ? "" : Number(e.target.value)
+              );
+              handleFilterChange();
+            }}
+            className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+          >
+            <option value="">Tất cả danh mục</option>
+            {categories.map((category) => (
+              <option key={category.category_id} value={category.category_id}>
+                {category.category_name}
+              </option>
+            ))}
           </select>
         </div>
       </div>
@@ -138,7 +216,10 @@ const Products = () => {
                   Danh mục
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Giá
+                  Giá bán
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Giá nhập
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Tồn kho
@@ -152,164 +233,193 @@ const Products = () => {
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {filteredProducts.map((product) => (
-                <tr key={product.product_id} className="hover:bg-gray-50">
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="flex items-center gap-3">
-                      <div className="w-12 h-12 bg-gray-200 rounded-lg" />
-                      <div>
-                        <p className="text-sm font-medium text-gray-900">
-                          {product.product_name}
-                        </p>
-                        <p className="text-xs text-gray-500">
-                          ID: #{product.product_id}
-                        </p>
-                      </div>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <span className="px-2 py-1 text-xs bg-gray-100 text-gray-700 rounded-full">
-                      {product.category_id}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-gray-900">
-                    {formatVND(product.price)}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {productsItem.find(pi => pi.product_id === product.product_id)?.quantity || 0}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <span
-                      className={`inline-block px-2 py-1 text-xs rounded-full ${
-                        (productsItem.find(pi => pi.product_id === product.product_id)?.quantity || 0 > 0 ? "Còn hàng" : "Hết hàng") === "Còn hàng"
-                          ? "bg-green-100 text-green-700"
-                          : "bg-red-100 text-red-700"
-                      }`}
-                    >
-                      {productsItem.find(pi => pi.product_id === product.product_id)?.quantity || 0 > 0 ? "Còn hàng" : "Hết hàng"}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                    <div className="flex items-center justify-end gap-2">
-                      <button
-                        onClick={() => handleEdit(product)}
-                        className="p-2 text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
-                        title="Sửa sản phẩm"
-                      >
-                        <Edit size={16} />
-                      </button>
-                      <button
-                        onClick={() => handleDeleteClick(product)}
-                        className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                        title="Xóa sản phẩm"
-                      >
-                        <Trash2 size={16} />
-                      </button>
-                    </div>
+              {isLoading ? (
+                <tr>
+                  <td
+                    colSpan={7}
+                    className="px-6 py-8 text-center text-gray-500"
+                  >
+                    Đang tải danh sách sản phẩm...
                   </td>
                 </tr>
-              ))}
+              ) : error ? (
+                <tr>
+                  <td
+                    colSpan={7}
+                    className="px-6 py-8 text-center text-red-500"
+                  >
+                    Lỗi khi tải danh sách sản phẩm:{" "}
+                    {error instanceof Error
+                      ? error.message
+                      : "Lỗi không xác định"}
+                  </td>
+                </tr>
+              ) : filteredProducts.length === 0 ? (
+                <tr>
+                  <td
+                    colSpan={7}
+                    className="px-6 py-8 text-center text-gray-500"
+                  >
+                    Không tìm thấy sản phẩm nào
+                  </td>
+                </tr>
+              ) : (
+                paginatedProducts.map((product) => (
+                  <tr key={product.product_id} className="hover:bg-gray-50">
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="flex items-center gap-3">
+                        <div className="w-12 h-12 rounded-lg bg-gray-100 overflow-hidden flex items-center justify-center">
+                          {product.thumbnail ? (
+                            <img
+                              src={product.thumbnail}
+                              alt={product.product_name}
+                              className="w-full h-full object-cover"
+                              loading="lazy"
+                            />
+                          ) : (
+                            <span className="text-xs text-gray-500">
+                              No image
+                            </span>
+                          )}
+                        </div>
+                        <div>
+                          <p className="text-sm font-medium text-gray-900">
+                            {product.product_name}
+                          </p>
+                          <p className="text-xs text-gray-500">
+                            ID: #{product.product_id}
+                          </p>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <span className="px-2 py-1 text-xs bg-gray-100 text-gray-700 rounded-full">
+                        {product.category_id}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-gray-900">
+                      {formatVND(product.price)}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                      {product.price_purchase
+                        ? formatVND(product.price_purchase)
+                        : "-"}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      {productsItem.find(
+                        (pi) => pi.product_id === product.product_id
+                      )?.quantity || 0}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <span
+                        className={`inline-block px-2 py-1 text-xs rounded-full ${
+                          (productsItem.find(
+                            (pi) => pi.product_id === product.product_id
+                          )?.quantity || 0 > 0
+                            ? "Còn hàng"
+                            : "Hết hàng") === "Còn hàng"
+                            ? "bg-green-100 text-green-700"
+                            : "bg-red-100 text-red-700"
+                        }`}
+                      >
+                        {productsItem.find(
+                          (pi) => pi.product_id === product.product_id
+                        )?.quantity || 0 > 0
+                          ? "Còn hàng"
+                          : "Hết hàng"}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                      <div className="flex items-center justify-end gap-2">
+                        <button
+                          onClick={() => handleEdit(product)}
+                          className="p-2 text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
+                          title="Sửa sản phẩm"
+                        >
+                          <Edit size={16} />
+                        </button>
+                        <button
+                          onClick={() => handleDeleteClick(product)}
+                          className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                          title="Xóa sản phẩm"
+                        >
+                          <Trash2 size={16} />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         </div>
 
         <div className="bg-gray-50 px-6 py-4 flex items-center justify-between border-t border-gray-200">
           <p className="text-sm text-gray-700">
-            Hiển thị <span className="font-medium">1</span> đến{" "}
-            <span className="font-medium">{filteredProducts.length}</span> trong
-            tổng số <span className="font-medium">{products.length}</span> sản
+            Hiển thị{" "}
+            <span className="font-medium">
+              {filteredProducts.length > 0 ? startIndex + 1 : 0}
+            </span>{" "}
+            đến{" "}
+            <span className="font-medium">
+              {Math.min(endIndex, filteredProducts.length)}
+            </span>{" "}
+            trong tổng số{" "}
+            <span className="font-medium">{filteredProducts.length}</span> sản
             phẩm
           </p>
           <div className="flex items-center gap-2">
-            <button className="px-3 py-1 border border-gray-300 rounded-lg text-sm hover:bg-gray-50">
+            <button
+              onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
+              disabled={currentPage === 1}
+              className="px-3 py-1 border border-gray-300 rounded-lg text-sm hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
               Trước
             </button>
-            <button className="px-3 py-1 bg-indigo-600 text-white rounded-lg text-sm">
-              1
-            </button>
-            <button className="px-3 py-1 border border-gray-300 rounded-lg text-sm hover:bg-gray-50">
+            <div className="flex items-center gap-1">
+              {Array.from({ length: totalPages }, (_, i) => i + 1)
+                .filter((page) => {
+                  // Show first page, last page, current page, and pages around current
+                  if (totalPages <= 7) return true;
+                  if (page === 1 || page === totalPages) return true;
+                  if (Math.abs(page - currentPage) <= 1) return true;
+                  return false;
+                })
+                .map((page, index, array) => {
+                  // Add ellipsis
+                  const showEllipsisBefore =
+                    index > 0 && array[index - 1] !== page - 1;
+                  return (
+                    <div key={page} className="flex items-center gap-1">
+                      {showEllipsisBefore && (
+                        <span className="px-2 text-gray-500">...</span>
+                      )}
+                      <button
+                        onClick={() => setCurrentPage(page)}
+                        className={`px-3 py-1 rounded-lg text-sm ${
+                          currentPage === page
+                            ? "bg-indigo-600 text-white"
+                            : "border border-gray-300 hover:bg-gray-50"
+                        }`}
+                      >
+                        {page}
+                      </button>
+                    </div>
+                  );
+                })}
+            </div>
+            <button
+              onClick={() =>
+                setCurrentPage((prev) => Math.min(totalPages, prev + 1))
+              }
+              disabled={currentPage === totalPages}
+              className="px-3 py-1 border border-gray-300 rounded-lg text-sm hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
               Sau
             </button>
           </div>
         </div>
       </div>
-      <Dialog
-        open={openAddProducts}
-        onClose={() => setOpenAddProduct(false)}
-        title="Thêm sản phẩm mới"
-        maxWidth="lg"
-      >
-        <form className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Tên sản phẩm
-            </label>
-            <input
-              type="text"
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
-              placeholder="Nhập tên sản phẩm"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Danh mục sản phẩm
-            </label>
-            <select className="px-4 py-2 w-full  border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
-              <option>Danh mục sản phẩm</option>
-              <option>Vợt</option>
-              <option>Quần áo</option>
-              <option>Giày</option>
-              <option>Phụ kiện</option>
-            </select>
-          </div>
-          <div className="grid grid-cols-2 gap-4 items-center justify-center">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Giá
-              </label>
-              <input
-                type=""
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                placeholder="Nhập giá"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Số lượng cần mua
-              </label>
-              <input
-                type=""
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                placeholder="Nhập số lượng"
-              />
-            </div>
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Nhà cung cấp
-            </label>
-            <select className="px-4 py-2 border border-gray-300 w-full rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
-              <option>Chọn nhà cung cấp</option>
-            </select>
-          </div>
-          <div className="flex justify-end gap-3 pt-4">
-            <button
-              type="button"
-              onClick={() => setOpenAddProduct(false)}
-              className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
-            >
-              Hủy
-            </button>
-            <button
-              type="submit"
-              className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700"
-            >
-              Thêm sản phẩm
-            </button>
-          </div>
-        </form>
-      </Dialog>
-
       <DialogEditProduct
         open={openEditProduct}
         onClose={() => {
@@ -319,56 +429,52 @@ const Products = () => {
         title="Sửa sản phẩm"
         maxWidth="lg"
       >
-        <form className="space-y-4">
+        <form onSubmit={handleUpdateProduct} className="space-y-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Tên sản phẩm
+              Tên sản phẩm <span className="text-red-500">*</span>
             </label>
             <input
               type="text"
+              name="product_name"
               defaultValue={selectedProduct?.product_name || ""}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
               placeholder="Nhập tên sản phẩm"
+              required
             />
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Danh mục sản phẩm
+              Danh mục sản phẩm <span className="text-red-500">*</span>
             </label>
             <select
+              name="category_id"
               defaultValue={selectedProduct?.category_id || ""}
               className="px-4 py-2 w-full border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              required
             >
-              <option>Danh mục sản phẩm</option>
-              <option>Vợt</option>
-              <option>Quần áo</option>
-              <option>Giày</option>
-              <option>Phụ kiện</option>
+              <option value="">Chọn danh mục</option>
+              {categories.map((category) => (
+                <option key={category.category_id} value={category.category_id}>
+                  {category.category_name}
+                </option>
+              ))}
             </select>
           </div>
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Giá
-              </label>
-              <input
-                type=""
-                defaultValue={selectedProduct?.price || 0}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                placeholder="Nhập giá"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Tồn kho
-              </label>
-              <input
-                type=""
-                defaultValue={productsItem.find(pi => pi.product_id === selectedProduct?.product_id)?.quantity || 0}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                placeholder="Nhập số lượng"
-              />
-            </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Giá bán <span className="text-red-500">*</span>
+            </label>
+            <input
+              type="number"
+              name="price"
+              defaultValue={selectedProduct?.price || 0}
+              min="0"
+              step="1000"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              placeholder="Nhập giá bán"
+              required
+            />
           </div>
           <div className="flex justify-end gap-3 pt-4">
             <button
@@ -378,14 +484,16 @@ const Products = () => {
                 setSelectedProduct(null);
               }}
               className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
+              disabled={isUpdating}
             >
               Hủy
             </button>
             <button
               type="submit"
-              className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700"
+              className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed"
+              disabled={isUpdating}
             >
-              Lưu thay đổi
+              {isUpdating ? "Đang cập nhật..." : "Lưu thay đổi"}
             </button>
           </div>
         </form>

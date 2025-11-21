@@ -61,7 +61,9 @@ const CheckOut = () => {
   const [shippingMethod, setShippingMethod] = useState<
     "freeShip" | "standard" | "express"
   >("standard");
-  const [paymentMethod, setPaymentMethod] = useState<"cod" | "card">("cod");
+  const [paymentMethod, setPaymentMethod] = useState<
+    "cod" | "card" | "vnpay" | "vietqr"
+  >("cod");
   const [customerInfo, setCustomerInfo] = useState<CustomerInfo | null>(null);
   const [selectedAddressId, setSelectedAddressId] = useState<number | null>(
     null
@@ -114,8 +116,90 @@ const CheckOut = () => {
         throw new Error("Đặt hàng thất bại");
       }
       const ans = await res.json();
-      // toast.success("Đặt hàng thành công");
-      // navigate(`/orders/${ans.order_id}`, { state: { order: ans } });
+
+      // Nếu thanh toán bằng VNPay, tạo payment URL và redirect
+      if (ans.payment_method === "vnpay" && ans.requires_payment) {
+        try {
+          const paymentRes = await fetch(
+            `${API_BASE}/api/payment/vnpay/create-url`,
+            {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${token}`,
+              },
+              body: JSON.stringify({
+                order_id: ans.order_id,
+                amount: total,
+                order_info: `Thanh toán đơn hàng #${ans.order_id}`,
+              }),
+            }
+          );
+
+          if (!paymentRes.ok) {
+            throw new Error("Không thể tạo URL thanh toán VNPay");
+          }
+
+          const paymentData = await paymentRes.json();
+
+          // Redirect đến trang thanh toán VNPay
+          window.location.href = paymentData.payment_url;
+          return;
+        } catch (error: any) {
+          console.error("VNPay payment URL error:", error);
+          toast.error(error.message || "Lỗi khi tạo URL thanh toán VNPay");
+          return;
+        }
+      }
+
+      // Nếu thanh toán bằng VietQR, tạo QR code và hiển thị
+      if (ans.payment_method === "vietqr" && ans.requires_payment) {
+        try {
+          const paymentRes = await fetch(
+            `${API_BASE}/api/payment/vietqr/create-qr`,
+            {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${token}`,
+              },
+              body: JSON.stringify({
+                order_id: ans.order_id,
+                amount: total,
+                order_info: `Thanh toán đơn hàng #${ans.order_id}`,
+              }),
+            }
+          );
+
+          if (!paymentRes.ok) {
+            const errorData = await paymentRes.json();
+            throw new Error(errorData.error || "Không thể tạo QR code VietQR");
+          }
+
+          const paymentData = await paymentRes.json();
+
+          // Navigate đến trang hiển thị QR code
+          navigate(`/payment/vietqr/${ans.order_id}`, {
+            state: {
+              qrUrl: paymentData.qr_url,
+              qrData: paymentData.qr_data,
+              orderId: ans.order_id,
+              amount: total,
+              bankName: paymentData.bank_name,
+              accountNumber: paymentData.account_number,
+              accountName: paymentData.account_name,
+              message: paymentData.message,
+            },
+          });
+          return;
+        } catch (error: any) {
+          console.error("VietQR QR code error:", error);
+          toast.error(error.message || "Lỗi khi tạo QR code VietQR");
+          return;
+        }
+      }
+
+      // COD hoặc payment method khác: navigate đến result page
       navigate(`/result-order/${ans.order_id}`);
     } catch (error: any) {
       console.error("Checkout error:", error);
@@ -564,7 +648,39 @@ const CheckOut = () => {
                       </p>
                     </div>
                   </label>
+                  {/* <label className="flex items-center gap-4 p-4 border-2 rounded-lg cursor-pointer hover:border-blue-500 transition-colors">
+                    <input
+                      type="radio"
+                      name="payment"
+                      checked={paymentMethod === "vnpay"}
+                      onChange={() => setPaymentMethod("vnpay")}
+                      className="w-4 h-4"
+                    />
+                    <div className="flex-1">
+                      <p className="font-medium">Thanh toán online (VNPay)</p>
+                      <p className="text-sm text-gray-500">
+                        Thanh toán qua thẻ ATM, Internet Banking, Ví điện tử
+                      </p>
+                    </div>
+                  </label> */}
                   <label className="flex items-center gap-4 p-4 border-2 rounded-lg cursor-pointer hover:border-blue-500 transition-colors">
+                    <input
+                      type="radio"
+                      name="payment"
+                      checked={paymentMethod === "vietqr"}
+                      onChange={() => setPaymentMethod("vietqr")}
+                      className="w-4 h-4"
+                    />
+                    <div className="flex-1">
+                      <p className="font-medium">
+                        Chuyển khoản qua QR Code (VietQR)
+                      </p>
+                      <p className="text-sm text-gray-500">
+                        Quét mã QR để chuyển khoản qua ngân hàng
+                      </p>
+                    </div>
+                  </label>
+                  {/* <label className="flex items-center gap-4 p-4 border-2 rounded-lg cursor-pointer hover:border-blue-500 transition-colors">
                     <input
                       type="radio"
                       name="payment"
@@ -578,7 +694,7 @@ const CheckOut = () => {
                         MbBank, Vietcombank...
                       </p>
                     </div>
-                  </label>
+                  </label> */}
                 </div>
               </div>
             )}
@@ -613,7 +729,8 @@ const CheckOut = () => {
                     <p>
                       {paymentMethod === "cod" &&
                         "Thanh toán khi nhận hàng (COD)"}
-                      {paymentMethod === "card" && "Thẻ ngân hàng"}
+                      {paymentMethod === "vietqr" &&
+                        "Chuyển khoản qua QR Code (VietQR)"}
                     </p>
                   </div>
                 </div>

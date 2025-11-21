@@ -23,7 +23,8 @@ export function registerTopByCategoryRoutes(router: Router) {
           )
         `
         )
-        .in("category_id", categoryIds);
+        .in("category_id", categoryIds)
+        .or("is_deleted.is.null,is_deleted.eq.false");
       if (prodError) throw prodError;
 
       const productList = products ?? [];
@@ -40,11 +41,29 @@ export function registerTopByCategoryRoutes(router: Router) {
 
       const { data: items, error: itemsError } = await supabase
         .from("product_item")
-        .select("product_item_id, product_id, quantity")
+        .select(
+          `
+          product_item_id,
+          product_id,
+          quantity,
+          product_image (
+            image_filename
+          )
+        `
+        )
         .in("product_id", productIds);
       if (itemsError) throw itemsError;
 
       const productItemList = items ?? [];
+      
+      // Get thumbnails
+      const idToThumbnail = new Map<number, string>();
+      (productItemList ?? []).forEach((it: any) => {
+        const firstImage = it.product_image?.[0]?.image_filename;
+        if (it.product_id && firstImage && !idToThumbnail.has(it.product_id)) {
+          idToThumbnail.set(it.product_id, firstImage);
+        }
+      });
 
       if (productItemList.length === 0) {
         const result = categoryIds.map((catId) => {
@@ -63,12 +82,13 @@ export function registerTopByCategoryRoutes(router: Router) {
             }
           }
 
-          const topProducts = categoryProducts
-            .map((p: any) => ({
-              ...p,
-              sold_quantity: 0,
-            }))
-            .slice(0, 4);
+        const topProducts = categoryProducts
+          .map((p: any) => ({
+            ...p,
+            sold_quantity: 0,
+            thumbnail: idToThumbnail.get(p.product_id) ?? null,
+          }))
+          .slice(0, 4);
 
           return {
             category_id: catId,
@@ -129,6 +149,7 @@ export function registerTopByCategoryRoutes(router: Router) {
             ...p,
             sold_quantity: productIdToSold.get(p.product_id) ?? 0,
             total_quantity: productIdToInventory.get(p.product_id) ?? 0,
+            thumbnail: idToThumbnail.get(p.product_id) ?? null,
           }))
           .sort((a, b) => b.sold_quantity - a.sold_quantity)
           .slice(0, 4);

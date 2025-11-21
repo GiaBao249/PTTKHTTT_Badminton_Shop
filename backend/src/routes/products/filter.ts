@@ -30,6 +30,7 @@ export function registerFilterRoutes(router: Router) {
         )
       `
         )
+        .or("is_deleted.is.null,is_deleted.eq.false")
         .order("product_id", { ascending: false });
 
       if (categoryId) {

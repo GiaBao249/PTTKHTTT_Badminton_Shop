@@ -24,6 +24,7 @@ export function registerSearchRoutes(router: Router) {
       `
         )
         .or(`product_name.ilike.%${keyword}%,description.ilike.%${keyword}%`)
+        .or("is_deleted.is.null,is_deleted.eq.false")
         .order("product_id", { ascending: false });
 
       if (error) throw error;
@@ -33,19 +34,33 @@ export function registerSearchRoutes(router: Router) {
       const productIds = products.map((p: any) => p.product_id);
       const { data: items, error: itemsError } = await supabase
         .from("product_item")
-        .select("product_id, quantity")
+        .select(
+          `
+          product_id,
+          quantity,
+          product_image (
+            image_filename
+          )
+        `
+        )
         .in("product_id", productIds);
       if (itemsError) throw itemsError;
 
       const idToTotalQty = new Map<number, number>();
+      const idToThumbnail = new Map<number, string>();
       (items ?? []).forEach((it: any) => {
         const prev = idToTotalQty.get(it.product_id) ?? 0;
         idToTotalQty.set(it.product_id, prev + (it.quantity ?? 0));
+        const firstImage = it.product_image?.[0]?.image_filename;
+        if (it.product_id && firstImage && !idToThumbnail.has(it.product_id)) {
+          idToThumbnail.set(it.product_id, firstImage);
+        }
       });
 
       const withInventory = products.map((p: any) => ({
         ...p,
         total_quantity: idToTotalQty.get(p.product_id) ?? 0,
+        thumbnail: idToThumbnail.get(p.product_id) ?? null,
       }));
 
       res.json(withInventory);
