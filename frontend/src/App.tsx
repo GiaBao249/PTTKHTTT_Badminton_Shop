@@ -13,10 +13,15 @@ import AdminLayout from "./Admin/AdminLayout";
 import Dashboard from "./Admin/Pages/Dashboard";
 import Products from "./Admin/Pages/Products";
 import Orders from "./Admin/Pages/Orders";
+import Invoices from "./Admin/Pages/Invoices";
 import Customers from "./Admin/Pages/Customers";
+import PurchaseOrders from "./Admin/Pages/PurchaseOrders";
 import { useAuth } from "./contexts/AuthContext";
 import { useEffect } from "react";
 import OrderResultCheckout from "./Components/OrderResultCheckout";
+import VNPayReturn from "./Components/VNPayReturn";
+import VietQRPayment from "./Components/VietQRPayment";
+import VietQRTestCallback from "./Components/VietQRTestCallback";
 
 const App = () => {
   const { user, isLoading } = useAuth();
@@ -48,12 +53,21 @@ const App = () => {
           <Route index element={<Dashboard />} />
           <Route path="products" element={<Products />} />
           <Route path="orders" element={<Orders />} />
+          <Route path="invoices" element={<Invoices />} />
+          <Route path="purchase-orders" element={<PurchaseOrders />} />
           <Route path="customers" element={<Customers />} />
         </Route>
       </Route>
       <Route element={<OrderResultCheckout />}>
         <Route path="/result-order/:id" element={<OrderResultCheckout />} />
       </Route>
+      <Route path="/payment/vnpay/success" element={<VNPayReturn />} />
+      <Route path="/payment/vnpay/fail" element={<VNPayReturn />} />
+      <Route path="/payment/vietqr/:orderId" element={<VietQRPayment />} />
+      <Route
+        path="/payment/vietqr/:orderId/test-callback"
+        element={<VietQRTestCallback />}
+      />
     </Routes>
   );
 };

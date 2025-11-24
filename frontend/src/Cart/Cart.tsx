@@ -62,6 +62,7 @@ const Cart = () => {
           price: item.product_item.product.price,
           description: null,
           category: item.product_item.product.category || null,
+          thumbnail: item.product_item.product.thumbnail || null,
         };
         return {
           product: {
@@ -268,7 +269,6 @@ const Cart = () => {
       toast.success("Đã cập nhật số lượng");
       window.dispatchEvent(new CustomEvent("cart:reload"));
     } catch (error) {
-      // Revert on error
       fetchCartItems();
       toast.error("Không thể cập nhật số lượng");
     }

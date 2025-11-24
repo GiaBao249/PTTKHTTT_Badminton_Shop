@@ -29,7 +29,8 @@ export function registerCountRoutes(router: Router) {
 
       const query = supabase
         .from("product")
-        .select("*", { count: "exact", head: true });
+        .select("*", { count: "exact", head: true })
+        .or("is_deleted.is.null,is_deleted.eq.false");
 
       const finalQuery =
         resolvedCategoryId && resolvedCategoryId > 0

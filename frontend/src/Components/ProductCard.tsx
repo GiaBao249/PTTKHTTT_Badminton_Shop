@@ -15,6 +15,7 @@ type ProductCardProps = {
   onRemove?: () => void;
   onAddToCart?: () => void;
 };
+const DEFAULT_PLACEHOLDER = "/images/product-placeholder.png";
 const ProductCard = ({
   product,
   variant = "default",
@@ -27,6 +28,10 @@ const ProductCard = ({
   onAddToCart,
 }: ProductCardProps) => {
   const imgRef = useRef<HTMLImageElement | null>(null);
+  const thumbnail =
+    product.image && product.image.length > 0
+      ? product.image
+      : DEFAULT_PLACEHOLDER;
   const flyToCart = () => {
     try {
       const source = imgRef.current;
@@ -79,7 +84,7 @@ const ProductCard = ({
       <div className="flex flex-row gap-4 flex-1">
         <img
           ref={imgRef}
-          src={product.image}
+          src={thumbnail}
           alt=""
           className=" rounded-lg w-28 object-cover shrink-0 "
         />
@@ -188,7 +193,7 @@ const ProductCard = ({
       >
         <img
           ref={imgRef}
-          src={product.image}
+          src={thumbnail}
           alt={product.title}
           className={
             isList

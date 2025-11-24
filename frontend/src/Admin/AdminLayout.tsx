@@ -8,6 +8,8 @@ import {
   Menu,
   X,
   Settings,
+  FileText,
+  Receipt,
 } from "lucide-react";
 import { useState } from "react";
 import { useAuth } from "../contexts/AuthContext";
@@ -38,11 +40,13 @@ const AdminLayout = () => {
     { icon: LayoutDashboard, label: "Tổng quan", path: "/admin" },
     { icon: Package, label: "Sản phẩm", path: "/admin/products" },
     { icon: ShoppingBag, label: "Đơn hàng", path: "/admin/orders" },
+    { icon: Receipt, label: "Hóa đơn", path: "/admin/invoices" },
+    { icon: FileText, label: "Phiếu nhập", path: "/admin/purchase-orders" },
     { icon: Users, label: "Khách hàng", path: "/admin/customers" },
   ];
 
   return (
-    <div className="min-h-screen bg-gray-50 flex">
+    <div className="relative min-h-screen bg-gray-50 flex">
       {sidebarOpen && (
         <div
           className="fixed inset-0 bg-black/50 z-40 lg:hidden"
@@ -85,7 +89,7 @@ const AdminLayout = () => {
             })}
           </nav>
 
-          <div className="p-4 border-t border-gray-200 flex-shrink-0">
+          <div className="absolute bottom-0 mt-auto p-3 border-t border-gray-200 flex-shrink-0">
             <div className="flex items-center gap-3 px-4 py-3 mb-2">
               <div className="h-10 w-10 bg-indigo-600 rounded-full flex items-center justify-center text-white font-semibold">
                 {user?.name?.[0]?.toUpperCase() ||

@@ -1,5 +1,14 @@
 import { useEffect, useState } from "react";
-import { Search, Eye, Edit2, X } from "lucide-react";
+import {
+  Search,
+  Eye,
+  Edit2,
+  X,
+  ChevronLeft,
+  ChevronRight,
+  Download,
+} from "lucide-react";
+import { PDFDownloadLink } from "@react-pdf/renderer";
 import {
   DialogViewDetails,
   DialogStatusUpdate,
@@ -11,10 +20,15 @@ import { useOrderDetail } from "../hook/useOrderDetail";
 import { useUpdateOrderStatus } from "../hook/useUpdateOrderStatus";
 import { useProducts } from "../hook/useProducts";
 import { useProductItems } from "../hook/useProductItems";
+import { useInvoice } from "../hook/useInvoice";
+import { InvoicePDFDocument } from "../../Components/InvoicePDF";
+import { toast } from "react-toastify";
 
 const Orders = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
   const [openViewDetails, setOpenViewDetails] = useState(false);
   const [openStatusUpdate, setOpenStatusUpdate] = useState(false);
   const [openCancelConfirm, setOpenCancelConfirm] = useState(false);
@@ -48,15 +62,14 @@ const Orders = () => {
     price: number;
     description: string;
     warranty_period: number;
+    thumbnail?: string | null;
   }
 
   interface ProductItem {
-      product_item_id: number;
-      product_id: number;
-      quantity: number;
+    product_item_id: number;
+    product_id: number;
+    quantity: number;
   }
-
-
 
   const { data } = useOrders();
   const [orders, setOrders] = useState<Order[]>(data || []);
@@ -99,37 +112,53 @@ const Orders = () => {
       case "Shipped":
         return "Đang giao";
       case "Pending":
+      case "Processing":
         return "Chờ xử lý";
       case "Cancelled":
-        return "Đã hủy"; 
+        return "Đã hủy";
       default:
-        return status
-    };
-  }
+        return status;
+    }
+  };
 
   const getReverseStatus = (status: string) => {
     switch (status) {
-        case "Đã giao":
-            return "Delivered";
-        case "Đang giao":
-            return "Shipped";
-        case "Chờ xử lý":
-            return "Pending";
-        case "Đã hủy":
-            return "Cancelled";
-        default:
-            return status;
+      case "Đã giao":
+        return "Delivered";
+      case "Đang giao":
+        return "Shipped";
+      case "Chờ xử lý":
+        return "Processing";
+      case "Đã hủy":
+        return "Cancelled";
+      default:
+        return status;
     }
-};
+  };
 
   const filteredOrders = orders.filter((order) => {
     const matchesSearch =
-      customers.find(c => c.customer_id === order.customer_id)?.customer_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      customers
+        .find((c) => c.customer_id === order.customer_id)
+        ?.customer_name.toLowerCase()
+        .includes(searchTerm.toLowerCase()) ||
       order.order_id.toString().includes(searchTerm);
     const matchesStatus =
-      statusFilter === "all" || getConverseionStatus(order.status) === statusFilter;
+      statusFilter === "all" ||
+      getConverseionStatus(order.status) === statusFilter;
     return matchesSearch && matchesStatus;
   });
+
+  // Pagination logic
+  const totalPages = Math.ceil(filteredOrders.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const paginatedOrders = filteredOrders.slice(startIndex, endIndex);
+
+  // Reset to page 1 when filter changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, statusFilter]);
 
   const handleViewDetails = (order: (typeof orders)[0]) => {
     setSelectedOrder(order);
@@ -143,28 +172,29 @@ const Orders = () => {
 
   const handleStatusConfirm = async () => {
     if (!selectedOrder) return;
-    setIsUpdating(true);
-    // TODO: Gọi API cập nhật trạng thái
-    const nextStatus =
-      getConverseionStatus(selectedOrder.status) === "Chờ xử lý"
-        ? "Đang giao"
-        : getConverseionStatus(selectedOrder.status) === "Đang giao"
-        ? "Đã giao"
-        : "Đã giao";
-    console.log('Cập nhật trạng thái thành:', nextStatus);
-    try {
-        await updateOrderStatus.mutateAsync({
-            order_id: selectedOrder.order_id,
-            status: getReverseStatus(nextStatus)
-        });
-        console.log('Cập nhật trạng thái thành công');
-    } catch (error) {
-        // Hiển thị thông báo lỗi
-        console.error('Lỗi cập nhật:', error);
+
+    const currentStatusVi = getConverseionStatus(selectedOrder.status);
+    const nextStatus = getNextStatus(currentStatusVi);
+
+    if (!nextStatus) {
+      toast.warning("Không thể cập nhật trạng thái cho đơn hàng này.");
+      return;
     }
-    setIsUpdating(false);
-    setOpenStatusUpdate(false);
-    setSelectedOrder(null);
+
+    setIsUpdating(true);
+    try {
+      await updateOrderStatus.mutateAsync({
+        order_id: selectedOrder.order_id,
+        status: getReverseStatus(nextStatus),
+      });
+      console.log("Cập nhật trạng thái thành công:", nextStatus);
+    } catch (error) {
+      console.error("Lỗi cập nhật:", error);
+    } finally {
+      setIsUpdating(false);
+      setOpenStatusUpdate(false);
+      setSelectedOrder(null);
+    }
   };
 
   const handleCancelClick = (order: (typeof orders)[0]) => {
@@ -178,14 +208,13 @@ const Orders = () => {
     // TODO: Gọi API hủy đơn hàng
     // await new Promise((resolve) => setTimeout(resolve, 1500));
     try {
-        await updateOrderStatus.mutateAsync({
-            order_id: selectedOrder.order_id,
-            status: getReverseStatus("Đã hủy")
-        });
-        console.log('Cập nhật trạng thái thành công');
+      await updateOrderStatus.mutateAsync({
+        order_id: selectedOrder.order_id,
+        status: getReverseStatus("Đã hủy"),
+      });
+      console.log("Cập nhật trạng thái thành công");
     } catch (error) {
-        // Hiển thị thông báo lỗi
-        console.error('Lỗi cập nhật:', error);
+      console.error("Lỗi cập nhật:", error);
     }
     setIsCanceling(false);
     setOpenCancelConfirm(false);
@@ -199,7 +228,7 @@ const Orders = () => {
       case "Đang giao":
         return "Đã giao";
       default:
-        return "Đã giao";
+        return null;
     }
   };
 
@@ -208,59 +237,143 @@ const Orders = () => {
     return <span>{orderDetails?.length || 0} sản phẩm</span>;
   }
 
-  function OrderProductList({ orderId, products, productItems }: { orderId: number; products: Product[]; productItems: ProductItem[] }) {
+  function InvoicePrintButton({ orderId }: { orderId: number }) {
+    const { data: invoice, isLoading } = useInvoice(orderId);
+
+    if (isLoading || !invoice) {
+      return null;
+    }
+
+    return (
+      <PDFDownloadLink
+        document={<InvoicePDFDocument invoice={invoice} />}
+        fileName={`hoa-don-${orderId}.pdf`}
+        className="inline-flex items-center gap-2 px-3 py-2 text-sm bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
+      >
+        {({ loading }) =>
+          loading ? (
+            "Đang tạo PDF..."
+          ) : (
+            <>
+              <Download size={16} />
+              In đơn hàng
+            </>
+          )
+        }
+      </PDFDownloadLink>
+    );
+  }
+
+  function OrderProductList({
+    orderId,
+    products,
+    productItems,
+  }: {
+    orderId: number;
+    products: Product[];
+    productItems: ProductItem[];
+  }) {
     const { data: orderDetails } = useOrderDetail(orderId);
-    console.log('🔍 Order details for orderId', orderId, ':', orderDetails);
     if (!orderDetails || orderDetails.length === 0) {
-      return <div className="text-sm text-gray-500 text-center py-2">Không có chi tiết đơn hàng</div>;
+      return (
+        <div className="text-sm text-gray-500 text-center py-2">
+          Không có chi tiết đơn hàng
+        </div>
+      );
     }
     return (
       <div className="space-y-2">
         {orderDetails.map((od: any, idx: number) => {
-          const pi = productItems.find((p: ProductItem) => Number(p.product_item_id) === Number(od.product_item_id));
-          const product = pi ? products.find((pr: Product) => Number(pr.product_id) === Number(pi.product_id)) : undefined;
+          const pi = productItems.find(
+            (p: ProductItem) =>
+              Number(p.product_item_id) === Number(od.product_item_id)
+          );
+          const product = pi
+            ? products.find(
+                (pr: Product) => Number(pr.product_id) === Number(pi.product_id)
+              )
+            : undefined;
           const name = product?.product_name;
           const unitPrice = product?.price;
-          const lineAmount = typeof od.amount === "number" ? od.amount : (typeof unitPrice === "number" ? unitPrice * od.quantity : undefined);
+          const lineAmount =
+            typeof od.amount === "number"
+              ? od.amount
+              : typeof unitPrice === "number"
+              ? unitPrice * od.quantity
+              : undefined;
           return (
-        <div key={`${od.product_item_id}-${idx}`} className="p-3 bg-gray-50 rounded-lg">
-          <div className="flex items-start justify-between">
-            <div className="flex-1">
-              <p className="font-medium text-gray-900">{name}</p>
-              <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-gray-600">
-                <span className="px-2 py-1 bg-gray-100 rounded">ID: #{product?.product_id ?? "-"}</span>
-                <span className="px-2 py-1 bg-gray-100 rounded">Mục: #{od.product_item_id}</span>
-                <span className="px-2 py-1 bg-gray-100 rounded">Danh mục: {product?.category_id ?? "-"}</span>
+            <div
+              key={`${od.product_item_id}-${idx}`}
+              className="p-3 bg-gray-50 rounded-lg"
+            >
+              <div className="flex items-start justify-between gap-3">
+                <div className="w-16 h-16 rounded-lg bg-gray-100 overflow-hidden flex items-center justify-center flex-shrink-0">
+                  {product?.thumbnail ? (
+                    <img
+                      src={product.thumbnail}
+                      alt={name || "Product"}
+                      className="w-full h-full object-cover"
+                      loading="lazy"
+                    />
+                  ) : (
+                    <span className="text-xs text-gray-400">No image</span>
+                  )}
+                </div>
+                <div className="flex-1">
+                  <p className="font-medium text-gray-900">{name}</p>
+                  <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-gray-600">
+                    <span className="px-2 py-1 bg-gray-100 rounded">
+                      ID: #{product?.product_id ?? "-"}
+                    </span>
+                    <span className="px-2 py-1 bg-gray-100 rounded">
+                      Mục: #{od.product_item_id}
+                    </span>
+                    <span className="px-2 py-1 bg-gray-100 rounded">
+                      Danh mục: {product?.category_id ?? "-"}
+                    </span>
+                  </div>
+                  <div className="mt-1 text-xs text-gray-600">
+                    <span>Nhà cung cấp: {product?.supplier_id ?? "-"}</span>
+                    <span className="mx-2">•</span>
+                    <span>
+                      Bảo hành:{" "}
+                      {product?.warranty_period != null
+                        ? `${product.warranty_period} tháng`
+                        : "-"}
+                    </span>
+                    <span className="mx-2">•</span>
+                    <span>
+                      {/* Tồn kho: {pi?.quantity != null ? pi.quantity : "-"} */}
+                    </span>
+                  </div>
+                  {product?.description && (
+                    <p className="mt-1 text-xs text-gray-500">
+                      {product.description}
+                    </p>
+                  )}
+                </div>
+                <div className="text-right">
+                  <div className="text-xs text-gray-500">Đơn giá</div>
+                  <div className="font-medium text-gray-900">
+                    {typeof unitPrice === "number" ? formatVND(unitPrice) : "-"}
+                  </div>
+                </div>
               </div>
-              <div className="mt-1 text-xs text-gray-600">
-                <span>Nhà cung cấp: {product?.supplier_id ?? "-"}</span>
-                <span className="mx-2">•</span>
-                <span>Bảo hành: {product?.warranty_period != null ? `${product.warranty_period} tháng` : "-"}</span>
-                <span className="mx-2">•</span>
-                <span>Tồn kho: {pi?.quantity != null ? pi.quantity : "-"}</span>
-              </div>
-              {product?.description && (
-                <p className="mt-1 text-xs text-gray-500">{product.description}</p>
-              )}
-            </div>
-            <div className="text-right">
-              <div className="text-xs text-gray-500">Đơn giá</div>
-              <div className="font-medium text-gray-900">
-                {typeof unitPrice === "number" ? formatVND(unitPrice) : "-"}
+              <div className="mt-2 flex items-center justify-between">
+                <p className="text-sm text-gray-500">Số lượng: {od.quantity}</p>
+                <div className="text-right">
+                  <div className="text-xs text-gray-500">Thành tiền</div>
+                  <p className="font-semibold text-gray-900">
+                    {typeof lineAmount === "number"
+                      ? formatVND(lineAmount)
+                      : typeof unitPrice === "number"
+                      ? formatVND(unitPrice * od.quantity)
+                      : "-"}
+                  </p>
+                </div>
               </div>
             </div>
-          </div>
-          <div className="mt-2 flex items-center justify-between">
-            <p className="text-sm text-gray-500">Số lượng: {od.quantity}</p>
-            <div className="text-right">
-              <div className="text-xs text-gray-500">Thành tiền</div>
-              <p className="font-semibold text-gray-900">
-                {typeof lineAmount === "number" ? formatVND(lineAmount) : (typeof unitPrice === "number" ? formatVND(unitPrice * od.quantity) : "-")}
-              </p>
-            </div>
-          </div>
-        </div>
-      );
+          );
         })}
       </div>
     );
@@ -333,88 +446,153 @@ const Orders = () => {
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {filteredOrders.map((order) => (
-                <tr key={order.order_id} className="hover:bg-gray-50">
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <p className="text-sm font-medium text-gray-900">
-                      #{order.order_id}
-                    </p>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <p className="text-sm text-gray-900">{customers.find(c => c.customer_id === order.customer_id)?.customer_name}</p>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {order.order_date}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    <OrderProductCount orderId={order.order_id} />
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-gray-900">
-                    {formatVND(order.total_amount)}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <span
-                      className={`inline-block px-2 py-1 text-xs rounded-full ${getStatusColor(
-                        getConverseionStatus(order.status)
-                      )}`}
-                    >
-                      {getConverseionStatus(order.status)}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                    <div className="flex items-center justify-end gap-2">
-                      <button
-                        onClick={() => handleViewDetails(order)}
-                        className="p-2 text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
-                        title="Xem chi tiết"
-                      >
-                        <Eye size={16} />
-                      </button>
-                      {getConverseionStatus(order.status) === "Chờ xử lý" && (
-                        <button
-                          onClick={() => handleCancelClick(order)}
-                          className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                          title="Hủy đơn hàng"
-                        >
-                          <X size={16} />
-                        </button>
-                      )}
-                      {getConverseionStatus(order.status) !== "Đã giao" &&
-                        getConverseionStatus(order.status) !== "Đã hủy" && (
-                          <button
-                            onClick={() => handleStatusUpdate(order)}
-                            className="p-2 text-green-600 hover:bg-green-50 rounded-lg transition-colors"
-                            title="Cập nhật trạng thái"
-                          >
-                            <Edit2 size={16} />
-                          </button>
-                        )}
-                    </div>
+              {paginatedOrders.length === 0 ? (
+                <tr>
+                  <td
+                    colSpan={7}
+                    className="px-6 py-8 text-center text-gray-500"
+                  >
+                    Không tìm thấy đơn hàng nào
                   </td>
                 </tr>
-              ))}
+              ) : (
+                paginatedOrders.map((order) => (
+                  <tr key={order.order_id} className="hover:bg-gray-50">
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <p className="text-sm font-medium text-gray-900">
+                        #{order.order_id}
+                      </p>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <p className="text-sm text-gray-900">
+                        {
+                          customers.find(
+                            (c) => c.customer_id === order.customer_id
+                          )?.customer_name
+                        }
+                      </p>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      {order.order_date}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      <OrderProductCount orderId={order.order_id} />
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-gray-900">
+                      {formatVND(order.total_amount)}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <span
+                        className={`inline-block px-2 py-1 text-xs rounded-full ${getStatusColor(
+                          getConverseionStatus(order.status)
+                        )}`}
+                      >
+                        {getConverseionStatus(order.status)}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                      <div className="flex items-center justify-end gap-2">
+                        <button
+                          onClick={() => handleViewDetails(order)}
+                          className="p-2 text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
+                          title="Xem chi tiết"
+                        >
+                          <Eye size={16} />
+                        </button>
+                        {getConverseionStatus(order.status) === "Chờ xử lý" && (
+                          <button
+                            onClick={() => handleCancelClick(order)}
+                            className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                            title="Hủy đơn hàng"
+                          >
+                            <X size={16} />
+                          </button>
+                        )}
+                        {getConverseionStatus(order.status) !== "Đã giao" &&
+                          getConverseionStatus(order.status) !== "Đã hủy" && (
+                            <button
+                              onClick={() => handleStatusUpdate(order)}
+                              className="p-2 text-green-600 hover:bg-green-50 rounded-lg transition-colors"
+                              title="Cập nhật trạng thái"
+                            >
+                              <Edit2 size={16} />
+                            </button>
+                          )}
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         </div>
 
         <div className="bg-gray-50 px-6 py-4 flex items-center justify-between border-t border-gray-200">
           <p className="text-sm text-gray-700">
-            Hiển thị <span className="font-medium">1</span> đến{" "}
-            <span className="font-medium">{filteredOrders.length}</span> trong
-            tổng số <span className="font-medium">{orders.length}</span> đơn
+            Hiển thị{" "}
+            <span className="font-medium">
+              {filteredOrders.length === 0 ? 0 : startIndex + 1}
+            </span>{" "}
+            đến{" "}
+            <span className="font-medium">
+              {Math.min(endIndex, filteredOrders.length)}
+            </span>{" "}
+            trong tổng số{" "}
+            <span className="font-medium">{filteredOrders.length}</span> đơn
             hàng
           </p>
-          <div className="flex items-center gap-2">
-            <button className="px-3 py-1 border border-gray-300 rounded-lg text-sm hover:bg-gray-50">
-              Trước
-            </button>
-            <button className="px-3 py-1 bg-indigo-600 text-white rounded-lg text-sm">
-              1
-            </button>
-            <button className="px-3 py-1 border border-gray-300 rounded-lg text-sm hover:bg-gray-50">
-              Sau
-            </button>
-          </div>
+          {totalPages > 0 && (
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
+                disabled={currentPage === 1}
+                className="px-3 py-1 border border-gray-300 rounded-lg text-sm hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1"
+              >
+                {/* <ChevronLeft size={16} /> */}
+                Trước
+              </button>
+              {Array.from({ length: totalPages }, (_, i) => i + 1)
+                .filter((page) => {
+                  // Show first page, last page, current page, and pages around current
+                  if (totalPages <= 7) return true;
+                  if (page === 1 || page === totalPages) return true;
+                  if (Math.abs(page - currentPage) <= 1) return true;
+                  return false;
+                })
+                .map((page, index, array) => {
+                  // Add ellipsis
+                  const showEllipsisBefore =
+                    index > 0 && array[index - 1] !== page - 1;
+                  return (
+                    <div key={page} className="flex items-center gap-1">
+                      {showEllipsisBefore && (
+                        <span className="px-2 text-gray-500">...</span>
+                      )}
+                      <button
+                        onClick={() => setCurrentPage(page)}
+                        className={`px-3 py-1 rounded-lg text-sm ${
+                          currentPage === page
+                            ? "bg-indigo-600 text-white"
+                            : "border border-gray-300 hover:bg-gray-50"
+                        }`}
+                      >
+                        {page}
+                      </button>
+                    </div>
+                  );
+                })}
+              <button
+                onClick={() =>
+                  setCurrentPage((prev) => Math.min(totalPages, prev + 1))
+                }
+                disabled={currentPage === totalPages}
+                className="px-3 py-1 border border-gray-300 rounded-lg text-sm hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1"
+              >
+                Sau
+                {/* <ChevronRight size={16} /> */}
+              </button>
+            </div>
+          )}
         </div>
       </div>
 
@@ -432,12 +610,18 @@ const Orders = () => {
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <p className="text-sm text-gray-500 mb-1">Mã đơn hàng</p>
-                <p className="font-medium text-gray-900">#{selectedOrder.order_id}</p>
+                <p className="font-medium text-gray-900">
+                  #{selectedOrder.order_id}
+                </p>
               </div>
               <div>
                 <p className="text-sm text-gray-500 mb-1">Khách hàng</p>
                 <p className="font-medium text-gray-900">
-                  {customers.find(c => c.customer_id == selectedOrder.customer_id)?.customer_name}
+                  {
+                    customers.find(
+                      (c) => c.customer_id == selectedOrder.customer_id
+                    )?.customer_name
+                  }
                 </p>
               </div>
               <div>
@@ -470,11 +654,18 @@ const Orders = () => {
               </div>
             </div>
             <div className="border-t border-gray-200 pt-4">
-              <h3 className="font-medium text-gray-900 mb-3">
-                Danh sách sản phẩm
-              </h3>
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="font-medium text-gray-900">
+                  Danh sách sản phẩm
+                </h3>
+                <InvoicePrintButton orderId={selectedOrder.order_id} />
+              </div>
               <div className="space-y-2">
-                <OrderProductList orderId={selectedOrder.order_id} products={products} productItems={productItems} />
+                <OrderProductList
+                  orderId={selectedOrder.order_id}
+                  products={products}
+                  productItems={productItems}
+                />
               </div>
             </div>
           </div>
@@ -489,8 +680,14 @@ const Orders = () => {
         onConfirm={handleStatusConfirm}
         title="Cập nhật trạng thái đơn hàng"
         message="Bạn có muốn thay đổi trạng thái đơn hàng này không?"
-        currentStatus={selectedOrder?.status || ""}
-        newStatus={selectedOrder ? getNextStatus(selectedOrder.status) : ""}
+        currentStatus={
+          selectedOrder ? getConverseionStatus(selectedOrder.status) : ""
+        }
+        newStatus={
+          selectedOrder
+            ? getNextStatus(getConverseionStatus(selectedOrder.status)) || ""
+            : ""
+        }
         isLoading={isUpdating}
       />
 
@@ -505,7 +702,11 @@ const Orders = () => {
         message="Bạn có chắc chắn muốn hủy đơn hàng này? Hành động này không thể hoàn tác."
         itemName={
           selectedOrder
-            ? `Đơn hàng #${selectedOrder.order_id} - ${customers.find(c => c.customer_id == selectedOrder.customer_id)?.customer_name}`
+            ? `Đơn hàng #${selectedOrder.order_id} - ${
+                customers.find(
+                  (c) => c.customer_id == selectedOrder.customer_id
+                )?.customer_name
+              }`
             : undefined
         }
         isLoading={isCanceling}

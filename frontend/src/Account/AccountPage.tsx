@@ -3,6 +3,22 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
 import { toast } from "react-toastify";
 import { animateScrollToTop } from "../utils/scroll/animateScrollToTop";
+import { X, Download } from "lucide-react";
+import { PDFDownloadLink, Font } from "@react-pdf/renderer";
+import { InvoicePDFDocument } from "../Components/InvoicePDF";
+import { useQuery } from "@tanstack/react-query";
+import BeVietnamRegular from "../assets/fonts/Be_Vietnam_Pro/BeVietnamPro-Regular.ttf?url";
+import BeVietnamSemiBold from "../assets/fonts/Be_Vietnam_Pro/BeVietnamPro-SemiBold.ttf?url";
+import BeVietnamBold from "../assets/fonts/Be_Vietnam_Pro/BeVietnamPro-Bold.ttf?url";
+
+Font.register({
+  family: "BeVietnamPro",
+  fonts: [
+    { src: BeVietnamRegular, fontWeight: "normal" },
+    { src: BeVietnamSemiBold, fontWeight: 600 },
+    { src: BeVietnamBold, fontWeight: 700 },
+  ],
+});
 type CustomerAddress = {
   address_id: number;
   address_line: string;
@@ -56,6 +72,9 @@ const AccountPage = () => {
   const [orders, setOrders] = useState<Order[]>([]);
   const [expandedOrders, setExpandedOrders] = useState<Set<number>>(new Set());
   const [loadingOrders, setLoadingOrders] = useState(false);
+  const [openCancelConfirm, setOpenCancelConfirm] = useState(false);
+  const [selectedOrderId, setSelectedOrderId] = useState<number | null>(null);
+  const [isCanceling, setIsCanceling] = useState(false);
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -383,7 +402,9 @@ const AccountPage = () => {
   const getStatusColor = (status: string) => {
     switch (status?.toLowerCase()) {
       case "pending":
+      case "processing":
       case "đang chờ":
+      case "chờ xử lý":
         return "bg-yellow-100 text-yellow-800";
       case "delivered":
         return "bg-green-100 text-green-800";
@@ -400,15 +421,118 @@ const AccountPage = () => {
 
   const getStatusText = (status: string) => {
     const statusMap: Record<string, string> = {
-      pending: "Đang chờ",
+      pending: "Chờ xử lý",
       delivered: "Đã giao",
       shipped: "Đang giao",
       completed: "Hoàn thành",
       cancelled: "Đã hủy",
-      processing: "Đang xử lý",
+      processing: "Chờ xử lý",
     };
 
     return statusMap[status?.toLowerCase() || ""] || status || "Chưa xác định";
+  };
+
+  const handleCancelClick = (orderId: number) => {
+    setSelectedOrderId(orderId);
+    setOpenCancelConfirm(true);
+  };
+
+  const CustomerInvoiceButton = ({ orderId }: { orderId: number }) => {
+    const API_BASE = import.meta.env.VITE_API_URL;
+    const { token } = useAuth();
+
+    const { data: invoice, isLoading } = useQuery({
+      queryKey: ["invoice", orderId],
+      queryFn: async () => {
+        const res = await fetch(`${API_BASE}/api/admin/getInvoice/${orderId}`, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+        if (!res.ok) throw new Error("Failed to fetch invoice");
+        return res.json();
+      },
+      enabled: !!orderId && !!token,
+    });
+
+    if (isLoading || !invoice) {
+      return null;
+    }
+
+    return (
+      <PDFDownloadLink
+        document={<InvoicePDFDocument invoice={invoice} />}
+        fileName={`hoa-don-${orderId}.pdf`}
+        className="px-4 py-2 text-sm font-medium text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 transition-colors flex items-center gap-2"
+      >
+        {({ loading }) =>
+          loading ? (
+            "Đang tạo PDF..."
+          ) : (
+            <>
+              <Download size={16} />
+              Tải hóa đơn
+            </>
+          )
+        }
+      </PDFDownloadLink>
+    );
+  };
+
+  const handleCancelConfirm = async () => {
+    if (!selectedOrderId || !token) return;
+
+    setIsCanceling(true);
+    try {
+      const res = await fetch(
+        `${API_BASE}/api/orders/cancel/${selectedOrderId}`,
+        {
+          method: "PATCH",
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(errorData.error || "Không thể hủy đơn hàng");
+      }
+
+      const data = await res.json();
+      toast.success(data.message || "Hủy đơn hàng thành công");
+
+      // Refresh orders list
+      const fetchOrders = async () => {
+        try {
+          const res = await fetch(
+            `${API_BASE}/api/orders/customer/${user.id}`,
+            {
+              method: "GET",
+              headers: {
+                Authorization: `Bearer ${token}`,
+              },
+            }
+          );
+          if (res.ok) {
+            const data = await res.json();
+            setOrders(Array.isArray(data) ? data : []);
+          }
+        } catch (error) {
+          console.error("Error refreshing orders:", error);
+        }
+      };
+      fetchOrders();
+
+      setOpenCancelConfirm(false);
+      setSelectedOrderId(null);
+    } catch (error: any) {
+      toast.error(error.message || "Lỗi khi hủy đơn hàng");
+      console.error("Error canceling order:", error);
+    } finally {
+      setIsCanceling(false);
+    }
   };
 
   return (
@@ -850,7 +974,7 @@ const AccountPage = () => {
                               </div>
 
                               <div className="pt-3 border-t border-gray-200">
-                                <div className="flex justify-between items-center">
+                                <div className="flex justify-between items-center mb-3">
                                   <span className="text-sm font-medium text-gray-700">
                                     Tổng tiền:
                                   </span>
@@ -862,6 +986,28 @@ const AccountPage = () => {
                                         }).format(order.total_amount)
                                       : "-"}
                                   </span>
+                                </div>
+                                {/* Nút hủy đơn hàng và in hóa đơn */}
+                                <div className="flex justify-end gap-2">
+                                  {(order.status === "Pending" ||
+                                    order.status === "Processing") && (
+                                    <button
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleCancelClick(order.order_id);
+                                      }}
+                                      className="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700 transition-colors flex items-center gap-2"
+                                    >
+                                      <X size={16} />
+                                      Hủy đơn hàng
+                                    </button>
+                                  )}
+                                  {(order.status === "Delivered" ||
+                                    order.status === "Completed") && (
+                                    <CustomerInvoiceButton
+                                      orderId={order.order_id}
+                                    />
+                                  )}
                                 </div>
                               </div>
                             </div>
@@ -880,6 +1026,43 @@ const AccountPage = () => {
           </div>
         </div>
       </div>
+
+      {/* Dialog xác nhận hủy đơn hàng */}
+      {openCancelConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <div className="bg-white rounded-lg shadow-xl max-w-md w-full mx-4">
+            <div className="p-6">
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                Xác nhận hủy đơn hàng
+              </h3>
+              <p className="text-sm text-gray-600 mb-4">
+                Bạn có chắc chắn muốn hủy đơn hàng #{selectedOrderId}? Hành động
+                này không thể hoàn tác và số lượng sản phẩm sẽ được trả lại vào
+                kho.
+              </p>
+              <div className="flex justify-end gap-3">
+                <button
+                  onClick={() => {
+                    setOpenCancelConfirm(false);
+                    setSelectedOrderId(null);
+                  }}
+                  disabled={isCanceling}
+                  className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors disabled:opacity-50"
+                >
+                  Hủy
+                </button>
+                <button
+                  onClick={handleCancelConfirm}
+                  disabled={isCanceling}
+                  className="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50 flex items-center gap-2"
+                >
+                  {isCanceling ? "Đang xử lý..." : "Xác nhận hủy"}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </section>
   );
 };

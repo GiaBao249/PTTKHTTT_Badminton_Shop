@@ -13,9 +13,20 @@ import { animateScrollToTop } from "../utils/scroll/animateScrollToTop";
 import { cartService } from "../services/cartService";
 import { useAuth } from "../contexts/AuthContext";
 import { toast } from "react-toastify";
+import type { PriceRange } from "./MainProducts";
 const API_BASE = import.meta.env.VITE_API_URL;
-type Props = { selectedOptionIds?: number[]; categoryId?: number | undefined };
-const ListOfProducts = ({ selectedOptionIds = [], categoryId }: Props) => {
+type Props = {
+  selectedOptionIds?: number[];
+  categoryId?: number | undefined;
+  priceRange?: PriceRange;
+  nameFilter?: string;
+};
+const ListOfProducts = ({
+  selectedOptionIds = [],
+  categoryId,
+  priceRange,
+  nameFilter,
+}: Props) => {
   const [selectedFilter, setSelectedFilter] = useState<string>("Liên quan");
   const [selectedPerPage, setSelectedPerPage] =
     useState<string>("6sp mỗi trang");
@@ -25,8 +36,6 @@ const ListOfProducts = ({ selectedOptionIds = [], categoryId }: Props) => {
     "Liên quan",
     "Giá: Thấp đến cao",
     "Giá: Cao đến thấp",
-    "Phổ biến",
-    "Đánh giá",
   ];
   const dataPerPageButton: string[] = [
     "6sp mỗi trang",
@@ -36,6 +45,7 @@ const ListOfProducts = ({ selectedOptionIds = [], categoryId }: Props) => {
 
   const [searchParams] = useSearchParams();
   const category = searchParams.get("category") || "all";
+  const searchQuery = searchParams.get("search");
 
   const handleView = (isGridView: boolean) => {
     setIsGridView(isGridView);
@@ -49,7 +59,17 @@ const ListOfProducts = ({ selectedOptionIds = [], categoryId }: Props) => {
       try {
         setLoading(true);
         setError(null);
-        if (!selectedOptionIds || selectedOptionIds.length === 0) {
+
+        // If search query exists, use search API
+        if (searchQuery && searchQuery.trim().length > 0) {
+          const keyword = encodeURIComponent(searchQuery.trim());
+          const res = await fetch(`${API_BASE}/api/products/search/${keyword}`);
+          if (!res.ok) {
+            throw Error(`HTTP ${res.status}`);
+          }
+          const data: ProductListItem[] = await res.json();
+          setProducts(data);
+        } else if (!selectedOptionIds || selectedOptionIds.length === 0) {
           const url =
             categoryId != null
               ? `${API_BASE}/api/products/category/${categoryId}`
@@ -83,7 +103,12 @@ const ListOfProducts = ({ selectedOptionIds = [], categoryId }: Props) => {
       }
     };
     loadData();
-  }, [selectedOptionIds, categoryId]);
+  }, [selectedOptionIds, categoryId, searchQuery]);
+
+  // Reset to first page when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [priceRange?.min, priceRange?.max, nameFilter]);
 
   const uiList: Products[] = useMemo(
     () => products.map(toUIProduct),
@@ -92,19 +117,50 @@ const ListOfProducts = ({ selectedOptionIds = [], categoryId }: Props) => {
 
   const itemsPerPage = parseInt(selectedPerPage.split(" ")[0]);
   const sorted = useMemo(() => {
+    let result = [...uiList];
+
+    // Apply sorting
     switch (selectedFilter) {
       case "Giá: Thấp đến cao":
-        return [...uiList].sort((a, b) => a.price - b.price);
+        result.sort((a, b) => a.price - b.price);
+        break;
       case "Giá: Cao đến thấp":
-        return [...uiList].sort((a, b) => b.price - a.price);
+        result.sort((a, b) => b.price - a.price);
+        break;
       default:
-        return uiList;
+        break;
     }
+
+    return result;
   }, [uiList, selectedFilter]);
-  const totalPages = Math.ceil(sorted.length / itemsPerPage);
+
+  // Apply price and name filters after sorting
+  const filtered = useMemo(() => {
+    let result = [...sorted];
+
+    // Filter by price range
+    if (priceRange) {
+      if (priceRange.min != null) {
+        result = result.filter((p) => p.price >= priceRange.min!);
+      }
+      if (priceRange.max != null) {
+        result = result.filter((p) => p.price <= priceRange.max!);
+      }
+    }
+
+    // Filter by name
+    if (nameFilter && nameFilter.trim().length > 0) {
+      const searchTerm = nameFilter.trim().toLowerCase();
+      result = result.filter((p) => p.title.toLowerCase().includes(searchTerm));
+    }
+
+    return result;
+  }, [sorted, priceRange, nameFilter]);
+
+  const totalPages = Math.ceil(filtered.length / itemsPerPage);
   const startIndex = (currentPage - 1) * itemsPerPage;
   const endIndex = startIndex + itemsPerPage;
-  const currentProducts = sorted.slice(startIndex, endIndex);
+  const currentProducts = filtered.slice(startIndex, endIndex);
   const handleFilterSelect = (filter: string) => {
     setSelectedFilter(filter);
   };
@@ -240,8 +296,8 @@ const ListOfProducts = ({ selectedOptionIds = [], categoryId }: Props) => {
         </div>
       )}
       <div className="text-center text-sm text-gray-600">
-        Hiển thị {startIndex + 1}-{Math.min(endIndex, sorted.length)} trên tổng{" "}
-        {sorted.length} sản phẩm
+        Hiển thị {startIndex + 1}-{Math.min(endIndex, filtered.length)} trên
+        tổng {filtered.length} sản phẩm
       </div>
     </div>
   );
