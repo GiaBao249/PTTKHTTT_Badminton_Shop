@@ -14,7 +14,7 @@ const VietQRPayment = () => {
   // Tạo URL test callback với IP address hiện tại
   const getTestCallbackUrl = () => {
     if (!orderId) return "";
-    const origin = "http://192.168.1.8:5173";
+    const origin = "http://192.168.3.140:5173";
     return `${origin}/payment/vietqr/${orderId}/test-callback`;
   };
 
