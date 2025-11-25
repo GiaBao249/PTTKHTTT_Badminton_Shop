@@ -52,7 +52,9 @@ export function registerCreatePurchaseOrder(router: Router) {
 
         let finalProductId = product_id;
 
-        if (product_id) {
+        // Kiểm tra nếu product_id có giá trị (không null, không undefined, không rỗng)
+        if (product_id !== null && product_id !== undefined && product_id !== "") {
+          // Sử dụng sản phẩm có sẵn
           const { data: existingProduct, error: productError } = await supabase
             .from("product")
             .select("*")
@@ -83,9 +85,10 @@ export function registerCreatePurchaseOrder(router: Router) {
 
           finalProductId = product_id;
         } else {
-          if (!product_name || !category_id) {
+          // Tạo sản phẩm mới
+          if (!product_name || !product_name.trim() || !category_id) {
             return res.status(400).json({
-              error: "Thiếu thông tin sản phẩm (tên và danh mục)",
+              error: "Thiếu thông tin sản phẩm (tên và danh mục là bắt buộc)",
             });
           }
 
@@ -93,8 +96,8 @@ export function registerCreatePurchaseOrder(router: Router) {
             .from("product")
             .insert([
               {
-                product_name,
-                category_id,
+                product_name: product_name.trim(),
+                category_id: category_id,
                 description: description || "",
                 warranty_period: warranty_period || 0,
                 price: 0,
@@ -105,7 +108,19 @@ export function registerCreatePurchaseOrder(router: Router) {
             .select()
             .single();
 
-          if (productError) throw productError;
+          if (productError) {
+            console.error("Lỗi khi tạo sản phẩm mới:", productError);
+            return res.status(500).json({
+              error: `Không thể tạo sản phẩm mới: ${productError.message || "Lỗi không xác định"}`,
+            });
+          }
+
+          if (!newProduct || !newProduct.product_id) {
+            return res.status(500).json({
+              error: "Không thể tạo sản phẩm mới: Không nhận được ID sản phẩm",
+            });
+          }
+
           finalProductId = newProduct.product_id;
         }
 
