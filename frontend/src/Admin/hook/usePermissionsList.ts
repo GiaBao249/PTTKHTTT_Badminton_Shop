@@ -10,15 +10,8 @@ interface Permission {
   module: string;
 }
 
-interface Role {
-  id: number;
-  name: string;
-  description: string;
-  permissions: Permission[];
-}
-
-const fetchRoles = async (token: string): Promise<Role[]> => {
-  const res = await fetch(`${API_BASE}/api/admin/roles`, {
+const fetchPermissions = async (token: string): Promise<Permission[]> => {
+  const res = await fetch(`${API_BASE}/api/admin/permissions`, {
     headers: {
       "Content-Type": "application/json",
       Authorization: `Bearer ${token}`,
@@ -27,29 +20,29 @@ const fetchRoles = async (token: string): Promise<Role[]> => {
 
   if (!res.ok) {
     const errorData = await res.json().catch(() => ({}));
-    throw new Error(errorData.error || "Lỗi khi lấy danh sách roles");
+    throw new Error(errorData.error || "Lỗi khi lấy danh sách permissions");
   }
 
   return res.json();
 };
 
-export const useRoles = () => {
+export const usePermissionsList = () => {
   const { token } = useAuth();
 
   return useQuery({
-    queryKey: ["roles"],
-    queryFn: () => fetchRoles(token!),
+    queryKey: ["permissionsList"],
+    queryFn: () => fetchPermissions(token!),
     enabled: !!token,
   });
 };
 
-export const useCreateRole = () => {
+export const useCreatePermission = () => {
   const { token } = useAuth();
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (data: { name: string; description?: string; permission_ids?: number[] }) => {
-      const res = await fetch(`${API_BASE}/api/admin/roles`, {
+    mutationFn: async (data: { code: string; name: string; module?: string }) => {
+      const res = await fetch(`${API_BASE}/api/admin/permissions`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -60,24 +53,24 @@ export const useCreateRole = () => {
 
       if (!res.ok) {
         const errorData = await res.json().catch(() => ({}));
-        throw new Error(errorData.error || "Lỗi khi tạo role");
+        throw new Error(errorData.error || "Lỗi khi tạo permission");
       }
 
       return res.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["roles"] });
+      queryClient.invalidateQueries({ queryKey: ["permissionsList"] });
     },
   });
 };
 
-export const useUpdateRole = () => {
+export const useUpdatePermission = () => {
   const { token } = useAuth();
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ id, ...data }: { id: number; name?: string; description?: string; permission_ids?: number[] }) => {
-      const res = await fetch(`${API_BASE}/api/admin/roles/${id}`, {
+    mutationFn: async ({ id, ...data }: { id: number; code?: string; name?: string; module?: string }) => {
+      const res = await fetch(`${API_BASE}/api/admin/permissions/${id}`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
@@ -88,25 +81,25 @@ export const useUpdateRole = () => {
 
       if (!res.ok) {
         const errorData = await res.json().catch(() => ({}));
-        throw new Error(errorData.error || "Lỗi khi cập nhật role");
+        throw new Error(errorData.error || "Lỗi khi cập nhật permission");
       }
 
       return res.json();
     },
     onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["permissionsList"] });
       queryClient.invalidateQueries({ queryKey: ["roles"] });
-      queryClient.invalidateQueries({ queryKey: ["permissions"] });
     },
   });
 };
 
-export const useDeleteRole = () => {
+export const useDeletePermission = () => {
   const { token } = useAuth();
   const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: async (id: number) => {
-      const res = await fetch(`${API_BASE}/api/admin/roles/${id}`, {
+      const res = await fetch(`${API_BASE}/api/admin/permissions/${id}`, {
         method: "DELETE",
         headers: {
           "Content-Type": "application/json",
@@ -116,13 +109,15 @@ export const useDeleteRole = () => {
 
       if (!res.ok) {
         const errorData = await res.json().catch(() => ({}));
-        throw new Error(errorData.error || "Lỗi khi xóa role");
+        throw new Error(errorData.error || "Lỗi khi xóa permission");
       }
 
       return res.json();
     },
     onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["permissionsList"] });
       queryClient.invalidateQueries({ queryKey: ["roles"] });
     },
   });
 };
+

@@ -24,6 +24,7 @@ import { registerGetPermissions } from "./admin/getPermissions";
 import { registerManageRoles } from "./admin/manageRoles";
 import { registerManagePermissions } from "./admin/managePermissions";
 import { registerManageAdminRoles } from "./admin/manageAdminRoles";
+import { registerGetAdminAccounts } from "./admin/getAdminAccounts";
 const router = express.Router();
 
 // Áp dụng authRequired cho tất cả routes admin
@@ -58,5 +59,6 @@ registerGetInvoices(router);
 registerManageRoles(router);
 registerManagePermissions(router);
 registerManageAdminRoles(router);
+registerGetAdminAccounts(router);
 
 export default router;
