@@ -16,37 +16,17 @@ export function registerGetPermissions(router: Router) {
 
       const adminId = user.id;
 
-      // Lấy tất cả permissions của admin thông qua roles
+      // Query trực tiếp từ các bảng (giống như middleware checkPermission)
+      // 1. Lấy role_ids từ admin_roles
       const { data: adminRoles, error: adminRolesError } = await supabase
         .from("admin_roles")
-        .select(`
-          role_id,
-          roles (
-            id,
-            name,
-            description,
-            role_permissions (
-              permission_id,
-              permissions (
-                id,
-                code,
-                name,
-                module
-              )
-            )
-          )
-        `)
+        .select("role_id")
         .eq("admin_account_id", adminId);
 
       if (adminRolesError) {
-        console.error("Error fetching admin permissions:", adminRolesError);
+        console.error("Error fetching admin roles:", adminRolesError);
         return res.status(500).json({ error: "Lỗi khi lấy quyền" });
       }
-
-      // Tập hợp tất cả permissions và roles
-      const permissions: any[] = [];
-      const roles: any[] = [];
-      const permissionSet = new Set<string>();
 
       // Trả về empty nếu admin không có roles
       if (!adminRoles || adminRoles.length === 0) {
@@ -54,43 +34,58 @@ export function registerGetPermissions(router: Router) {
           permissions: [],
           roles: [],
           permissionCodes: [],
-          hasNoRoles: true, // Flag để frontend biết admin chưa có roles
+          hasNoRoles: true,
         });
       }
 
-      if (adminRoles && adminRoles.length > 0) {
-        for (const adminRole of adminRoles) {
-          const role = adminRole.roles as any;
-          if (role) {
-            // Thêm role vào danh sách
-            roles.push({
-              id: role.id,
-              name: role.name,
-              description: role.description,
-            });
+      // 2. Lấy thông tin roles
+      const roleIds = adminRoles.map((ar: any) => ar.role_id).filter(Boolean);
+      const { data: rolesData, error: rolesError } = await supabase
+        .from("roles")
+        .select("id, name, description")
+        .in("id", roleIds);
 
-            // Lấy permissions của role
-            if (role.role_permissions) {
-              const rolePermissions = Array.isArray(role.role_permissions) 
-                ? role.role_permissions 
-                : [role.role_permissions];
-              
-              for (const rp of rolePermissions) {
-                const permission = rp.permissions;
-                if (permission && !permissionSet.has(permission.code)) {
-                  permissionSet.add(permission.code);
-                  permissions.push({
-                    id: permission.id,
-                    code: permission.code,
-                    name: permission.name,
-                    module: permission.module,
-                  });
-                }
-              }
-            }
-          }
-        }
+      const roles = rolesData || [];
+
+      // 3. Lấy role_permissions
+      const { data: rolePermsData, error: rolePermsError } = await supabase
+        .from("role_permissions")
+        .select("role_id, permission_id")
+        .in("role_id", roleIds);
+
+      if (rolePermsError) {
+        console.error("Error fetching role_permissions:", rolePermsError);
+        return res.status(500).json({ error: "Lỗi khi lấy quyền" });
       }
+
+      if (!rolePermsData || rolePermsData.length === 0) {
+        return res.json({
+          permissions: [],
+          roles,
+          permissionCodes: [],
+          hasNoRoles: false,
+        });
+      }
+
+      // 4. Lấy permissions
+      const permissionIds = [...new Set(rolePermsData.map((rp: any) => rp.permission_id).filter(Boolean))];
+      const { data: permissionsData, error: permsError } = await supabase
+        .from("permissions")
+        .select("id, code, name, module")
+        .in("id", permissionIds);
+
+      if (permsError) {
+        console.error("Error fetching permissions:", permsError);
+        return res.status(500).json({ error: "Lỗi khi lấy quyền" });
+      }
+
+      const permissions = permissionsData || [];
+      const permissionSet = new Set<string>();
+      permissions.forEach((p: any) => {
+        if (p.code) {
+          permissionSet.add(p.code);
+        }
+      });
 
       return res.json({
         permissions,

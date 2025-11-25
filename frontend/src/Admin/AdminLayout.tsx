@@ -13,12 +13,16 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 import { useAuth } from "../contexts/AuthContext";
+import { usePermissions } from "./hook/usePermissions";
 
 const AdminLayout = () => {
   const { pathname } = useLocation();
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  
+  // Chỉ gọi usePermissions khi user là admin
+  const { data: permissionsData, isLoading: permissionsLoading, error: permissionsError } = usePermissions();
 
   const active = (path: string) => {
     if (path === "/admin") {
@@ -36,14 +40,24 @@ const AdminLayout = () => {
     navigate("/");
   };
 
-  const menuItems = [
-    { icon: LayoutDashboard, label: "Tổng quan", path: "/admin" },
-    { icon: Package, label: "Sản phẩm", path: "/admin/products" },
-    { icon: ShoppingBag, label: "Đơn hàng", path: "/admin/orders" },
-    { icon: Receipt, label: "Hóa đơn", path: "/admin/invoices" },
-    { icon: FileText, label: "Phiếu nhập", path: "/admin/purchase-orders" },
-    { icon: Users, label: "Khách hàng", path: "/admin/customers" },
+  // Menu items với permissions
+  const allMenuItems = [
+    { icon: LayoutDashboard, label: "Tổng quan", path: "/admin", permission: "dashboard:read" },
+    { icon: Package, label: "Sản phẩm", path: "/admin/products", permission: "product:read" },
+    { icon: ShoppingBag, label: "Đơn hàng", path: "/admin/orders", permission: "order:read" },
+    { icon: Receipt, label: "Hóa đơn", path: "/admin/invoices", permission: "invoice:read" },
+    { icon: FileText, label: "Phiếu nhập", path: "/admin/purchase-orders", permission: "purchase_order:read" },
+    { icon: Users, label: "Khách hàng", path: "/admin/customers", permission: "customer:read" },
   ];
+
+  // Xử lý permissions
+  const permissionCodes = permissionsData?.permissionCodes || [];
+  
+  // Nếu có lỗi hoặc đang load, hiển thị tất cả menu items (để tránh ẩn menu khi có lỗi)
+  // Nếu đã load xong và không có lỗi, chỉ hiển thị items có quyền
+  const menuItems = (permissionsLoading || permissionsError) 
+    ? allMenuItems 
+    : allMenuItems.filter(item => permissionCodes.includes(item.permission));
 
   return (
     <div className="relative min-h-screen bg-gray-50 flex">

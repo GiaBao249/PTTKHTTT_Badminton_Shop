@@ -1,6 +1,8 @@
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "../../contexts/AuthContext";
 
+const API_BASE = import.meta.env.VITE_API_URL;
+
 interface Permission {
   id: number;
   code: string;
@@ -14,23 +16,24 @@ interface Role {
   description: string;
 }
 
-interface PermissionsData {
+interface PermissionsResponse {
   permissions: Permission[];
   roles: Role[];
   permissionCodes: string[];
+  hasNoRoles: boolean;
 }
 
-const API_BASE = import.meta.env.VITE_API_URL;
-
-const fetchPermissions = async (token: string): Promise<PermissionsData> => {
+const fetchPermissions = async (token: string): Promise<PermissionsResponse> => {
   const res = await fetch(`${API_BASE}/api/admin/getPermissions`, {
     headers: {
+      "Content-Type": "application/json",
       Authorization: `Bearer ${token}`,
     },
   });
 
   if (!res.ok) {
-    throw new Error("Không thể lấy quyền");
+    const errorData = await res.json().catch(() => ({}));
+    throw new Error(errorData.error || "Lỗi khi lấy quyền");
   }
 
   return res.json();
@@ -39,23 +42,17 @@ const fetchPermissions = async (token: string): Promise<PermissionsData> => {
 export const usePermissions = () => {
   const { user, token } = useAuth();
 
-  return useQuery<PermissionsData>({
+  return useQuery({
     queryKey: ["permissions", user?.id],
-    queryFn: () => fetchPermissions(token || ""),
+    queryFn: () => {
+      if (!token) {
+        throw new Error("No token available");
+      }
+      return fetchPermissions(token);
+    },
     enabled: !!user && !!token && user.role === "admin",
-    staleTime: 5 * 60 * 1000, // 5 minutes
+    staleTime: 5 * 60 * 1000, // Cache 5 phút
     retry: 1,
+    refetchOnWindowFocus: false,
   });
 };
-
-/**
- * Hook để check xem user có permission không
- */
-export const useHasPermission = (permissionCode: string): boolean => {
-  const { data } = usePermissions();
-  
-  if (!data) return false;
-  
-  return data.permissionCodes.includes(permissionCode);
-};
-
