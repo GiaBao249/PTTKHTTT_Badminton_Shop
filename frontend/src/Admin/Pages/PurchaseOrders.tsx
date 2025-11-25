@@ -4,8 +4,6 @@ import {
   Search,
   Eye,
   Trash2,
-  ChevronLeft,
-  ChevronRight,
   Download,
 } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
@@ -24,7 +22,6 @@ import { usePurchaseOrderDetail } from "../hook/usePurchaseOrderDetail";
 import { useSuppliers } from "../hook/useSuppliers";
 import { useEmployees } from "../hook/useEmployees";
 import { useProducts } from "../hook/useProducts";
-import { useCategories } from "../hook/useCategories";
 import { useAuth } from "../../contexts/AuthContext";
 import BeVietnamRegular from "../../assets/fonts/Be_Vietnam_Pro/BeVietnamPro-Regular.ttf?url";
 import BeVietnamSemiBold from "../../assets/fonts/Be_Vietnam_Pro/BeVietnamPro-SemiBold.ttf?url";
@@ -42,13 +39,8 @@ Font.register({
 
 interface PurchaseOrderItem {
   product_id: number | "";
-  product_name?: string;
-  category_id?: number | "";
-  description?: string;
-  warranty_period?: number | "";
   price: number | "";
   quantity: number | "";
-  isNew?: boolean;
 }
 
 const PurchaseOrders = () => {
@@ -80,7 +72,6 @@ const PurchaseOrders = () => {
   const { data: suppliersData } = useSuppliers();
   const { data: employeesData } = useEmployees();
   const { data: productsData, refetch: refetchProducts } = useProducts();
-  const { data: categoriesData } = useCategories();
   const { user } = useAuth();
 
   const purchaseOrders = purchaseOrdersData || [];
@@ -93,7 +84,6 @@ const PurchaseOrders = () => {
   const suppliers = suppliersData || [];
   const employees = employeesData || [];
   const products = productsData || [];
-  const categories = categoriesData || [];
 
   useEffect(() => {
     if (user && user.id && user.role === "admin") {
@@ -117,6 +107,17 @@ const PurchaseOrders = () => {
       }
     }
   }, [user, employees]);
+
+  // Refetch products khi mở dialog để đảm bảo danh sách luôn cập nhật
+  useEffect(() => {
+    if (openAddPurchaseOrder) {
+      // Invalidate cache và refetch để đảm bảo danh sách mới nhất
+      queryClient.invalidateQueries({ queryKey: ["products"] });
+      refetchProducts().catch((error) => {
+        console.error("Lỗi khi refetch products:", error);
+      });
+    }
+  }, [openAddPurchaseOrder, refetchProducts, queryClient]);
 
   const formatVND = (v: number) =>
     new Intl.NumberFormat("vi-VN", {
@@ -308,13 +309,8 @@ const PurchaseOrders = () => {
       ...items,
       {
         product_id: "",
-        product_name: "",
-        category_id: "",
-        description: "",
-        warranty_period: "",
         price: "",
         quantity: "",
-        isNew: false,
       },
     ]);
   };
@@ -330,6 +326,15 @@ const PurchaseOrders = () => {
   ) => {
     const newItems = [...items];
     newItems[index] = { ...newItems[index], [field]: value };
+    
+    // Khi chọn sản phẩm có sẵn, tự động điền giá nhập nếu có
+    if (field === "product_id" && value) {
+      const selectedProduct = products.find((p) => p.product_id === value);
+      if (selectedProduct && selectedProduct.price_purchase) {
+        newItems[index].price = selectedProduct.price_purchase;
+      }
+    }
+    
     setItems(newItems);
   };
 
@@ -340,29 +345,32 @@ const PurchaseOrders = () => {
       return;
     }
 
-    for (const item of items) {
-      if (item.isNew) {
-        if (
-          !item.product_name ||
-          !item.category_id ||
-          !item.price ||
-          !item.quantity
-        ) {
-          toast.warning(
-            "Vui lòng điền đầy đủ thông tin cho sản phẩm mới (tên, danh mục, giá, số lượng)"
-          );
-          return;
-        }
-      } else {
-        if (!item.product_id || !item.price || !item.quantity) {
-          toast.warning(
-            "Vui lòng chọn sản phẩm và điền đầy đủ giá, số lượng cho tất cả sản phẩm"
-          );
-          return;
-        }
+    // Validation chi tiết hơn
+    for (let i = 0; i < items.length; i++) {
+      const item = items[i];
+      
+      if (!item.product_id) {
+        toast.warning(`Sản phẩm #${i + 1}: Vui lòng chọn sản phẩm`);
+        return;
       }
-      if (Number(item.price) <= 0 || Number(item.quantity) <= 0) {
-        toast.warning("Giá và số lượng phải lớn hơn 0");
+      if (!item.price || Number(item.price) <= 0) {
+        toast.warning(`Sản phẩm #${i + 1}: Giá nhập phải lớn hơn 0`);
+        return;
+      }
+      if (!item.quantity || Number(item.quantity) <= 0) {
+        toast.warning(`Sản phẩm #${i + 1}: Số lượng phải lớn hơn 0`);
+        return;
+      }
+      
+      // Kiểm tra số lượng hợp lý
+      if (Number(item.quantity) > 100000) {
+        toast.warning(`Sản phẩm #${i + 1}: Số lượng quá lớn (tối đa 100,000)`);
+        return;
+      }
+      
+      // Kiểm tra giá hợp lý
+      if (Number(item.price) > 1000000000) {
+        toast.warning(`Sản phẩm #${i + 1}: Giá quá lớn (tối đa 1 tỷ VND)`);
         return;
       }
     }
@@ -370,24 +378,20 @@ const PurchaseOrders = () => {
     setIsSubmitting(true);
     try {
       const API_BASE = import.meta.env.VITE_API_URL;
+      const token = localStorage.getItem("auth_token");
       const response = await fetch(
         `${API_BASE}/api/admin/createPurchaseOrder`,
         {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
+            ...(token && { Authorization: `Bearer ${token}` }),
           },
           body: JSON.stringify({
             supplier_id: supplierId,
             employee_id: employeeId,
             items: items.map((item) => ({
-              product_id: item.isNew ? null : Number(item.product_id),
-              product_name: item.isNew ? item.product_name : undefined,
-              category_id: item.isNew ? Number(item.category_id) : undefined,
-              description: item.isNew ? item.description || "" : undefined,
-              warranty_period: item.isNew
-                ? Number(item.warranty_period) || 0
-                : undefined,
+              product_id: Number(item.product_id),
               price: Number(item.price),
               quantity: Number(item.quantity),
             })),
@@ -397,32 +401,37 @@ const PurchaseOrders = () => {
 
       if (!response.ok) {
         const error = await response.json();
-        throw new Error(error.error || "Không thể tạo phiếu nhập");
+        const errorMessage = error.error || "Không thể tạo phiếu nhập";
+        console.error("Lỗi tạo phiếu nhập:", error);
+        throw new Error(errorMessage);
       }
 
-      await response.json();
+      const result = await response.json();
+      console.log("Tạo phiếu nhập thành công:", result);
+      
       toast.success("Tạo phiếu nhập thành công!");
+      
+      // Refetch tất cả dữ liệu để cập nhật
+      queryClient.invalidateQueries({ queryKey: ["products"] });
+      queryClient.invalidateQueries({ queryKey: ["purchaseOrders"] });
+      queryClient.invalidateQueries({ queryKey: ["productItems"] });
+      
+      // Refetch products ngay để đảm bảo dropdown có sản phẩm mới
+      await Promise.all([
+        refetchProducts(),
+        refetchPurchaseOrders(),
+        queryClient.refetchQueries({ queryKey: ["productItems"] }),
+      ]);
+      
+      // Đóng dialog và reset form sau khi đã refetch xong
       setOpenAddPurchaseOrder(false);
       setSupplierId("");
       setItems([
         {
           product_id: "",
-          product_name: "",
-          category_id: "",
-          description: "",
-          warranty_period: "",
           price: "",
           quantity: "",
-          isNew: false,
         },
-      ]);
-      queryClient.invalidateQueries({ queryKey: ["purchaseOrders"] });
-      queryClient.invalidateQueries({ queryKey: ["products"] });
-      queryClient.invalidateQueries({ queryKey: ["productItems"] });
-      await Promise.all([
-        refetchPurchaseOrders(),
-        refetchProducts(),
-        queryClient.refetchQueries({ queryKey: ["productItems"] }),
       ]);
     } catch (error: any) {
       toast.warning(error.message || "Có lỗi xảy ra khi tạo phiếu nhập");
@@ -709,7 +718,18 @@ const PurchaseOrders = () => {
 
       <Dialog
         open={openAddPurchaseOrder}
-        onClose={() => setOpenAddPurchaseOrder(false)}
+        onClose={() => {
+          // Reset form khi đóng
+          setSupplierId("");
+          setItems([
+            {
+              product_id: "",
+              price: "",
+              quantity: "",
+            },
+          ]);
+          setOpenAddPurchaseOrder(false);
+        }}
         title="Tạo phiếu nhập mới"
         maxWidth="xl"
       >
@@ -773,217 +793,178 @@ const PurchaseOrders = () => {
               </button>
             </div>
 
-            <div className="space-y-4 max-h-96 overflow-y-auto">
-              {items.map((item, index) => (
-                <div
-                  key={index}
-                  className="p-4 border border-gray-200 rounded-lg bg-gray-50"
-                >
-                  <div className="flex items-start justify-between mb-3">
-                    <h4 className="font-medium text-gray-900">
-                      Sản phẩm #{index + 1}
-                    </h4>
-                    {items.length > 1 && (
-                      <button
-                        type="button"
-                        onClick={() => handleRemoveItem(index)}
-                        className="p-1 text-red-600 hover:bg-red-50 rounded"
-                      >
-                        <Trash2 size={16} />
-                      </button>
+            <div className="space-y-4 max-h-[500px] overflow-y-auto pr-2">
+              {items.map((item, index) => {
+                // Tìm sản phẩm đã chọn để hiển thị thông tin
+                const selectedProduct = item.product_id !== "" && item.product_id !== null && item.product_id !== undefined
+                  ? products.find((p) => Number(p.product_id) === Number(item.product_id))
+                  : null;
+
+                return (
+                  <div
+                    key={index}
+                    className="p-5 border-2 border-gray-200 rounded-xl bg-white shadow-sm hover:border-indigo-300 transition-colors"
+                  >
+                    <div className="flex items-start justify-between mb-4">
+                      <div className="flex items-center gap-3">
+                        <div className="flex items-center justify-center w-8 h-8 rounded-full bg-indigo-100 text-indigo-600 font-semibold text-sm">
+                          {index + 1}
+                        </div>
+                        <h4 className="font-semibold text-gray-900 text-base">
+                          Sản phẩm #{index + 1}
+                        </h4>
+                      </div>
+                      {items.length > 1 && (
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveItem(index)}
+                          className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                          title="Xóa sản phẩm"
+                        >
+                          <Trash2 size={18} />
+                        </button>
+                      )}
+                    </div>
+
+
+                    {/* Hiển thị thông tin sản phẩm đã chọn */}
+                    {selectedProduct && (
+                      <div className="mb-4 p-3 bg-indigo-50 border border-indigo-200 rounded-lg">
+                        <div className="flex items-start gap-3">
+                          {selectedProduct.thumbnail && (
+                            <img
+                              src={selectedProduct.thumbnail}
+                              alt={selectedProduct.product_name || `Sản phẩm ${selectedProduct.product_id}`}
+                              className="w-16 h-16 rounded-lg object-cover border border-gray-200"
+                            />
+                          )}
+                          <div className="flex-1">
+                            <p className="font-semibold text-gray-900 text-sm">
+                              {selectedProduct.product_name || `Sản phẩm #${selectedProduct.product_id}`}
+                            </p>
+                            <p className="text-xs text-gray-600 mt-1">
+                              ID: {selectedProduct.product_id}
+                              {selectedProduct.price_purchase && (
+                                <> • Giá nhập hiện tại: {formatVND(selectedProduct.price_purchase)}</>
+                              )}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
                     )}
-                  </div>
 
-                  <div className="mb-3">
-                    <label className="flex items-center gap-2 text-xs font-medium text-gray-700">
-                      {/* <input
-                        type="checkbox"
-                        checked={item.isNew || false}
-                        onChange={(e) => {
-                          handleItemChange(index, "isNew", e.target.checked);
-                          if (e.target.checked) {
-                            handleItemChange(index, "product_id", "");
-                          } else {
-                            handleItemChange(index, "product_name", "");
-                            handleItemChange(index, "category_id", "");
-                            handleItemChange(index, "description", "");
-                            handleItemChange(index, "warranty_period", "");
-                          }
-                        }}
-                        className="rounded"
-                      /> */}
-                      {/* <span>Tạo sản phẩm mới</span> */}
-                    </label>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-3">
-                    {item.isNew ? (
-                      <>
-                        <div className="col-span-2">
-                          <label className="block text-xs font-medium text-gray-700 mb-1">
-                            Tên sản phẩm <span className="text-red-500">*</span>
-                          </label>
-                          <input
-                            type="text"
-                            value={item.product_name || ""}
-                            onChange={(e) =>
-                              handleItemChange(
-                                index,
-                                "product_name",
-                                e.target.value
-                              )
-                            }
-                            className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                            placeholder="Nhập tên sản phẩm"
-                            required
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-xs font-medium text-gray-700 mb-1">
-                            Danh mục <span className="text-red-500">*</span>
-                          </label>
-                          <select
-                            value={item.category_id || ""}
-                            onChange={(e) =>
-                              handleItemChange(
-                                index,
-                                "category_id",
-                                e.target.value ? Number(e.target.value) : ""
-                              )
-                            }
-                            className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                            required
-                          >
-                            <option value="">Chọn danh mục</option>
-                            {categories.map((category) => (
-                              <option
-                                key={category.category_id}
-                                value={category.category_id}
-                              >
-                                {category.category_name}
-                              </option>
-                            ))}
-                          </select>
-                        </div>
-                        <div>
-                          <label className="block text-xs font-medium text-gray-700 mb-1">
-                            Bảo hành (tháng)
-                          </label>
-                          <input
-                            type="number"
-                            value={item.warranty_period || ""}
-                            onChange={(e) =>
-                              handleItemChange(
-                                index,
-                                "warranty_period",
-                                e.target.value ? Number(e.target.value) : ""
-                              )
-                            }
-                            className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                            placeholder="0"
-                            min="0"
-                          />
-                        </div>
-                        <div className="col-span-2">
-                          <label className="block text-xs font-medium text-gray-700 mb-1">
-                            Mô tả
-                          </label>
-                          <textarea
-                            value={item.description || ""}
-                            onChange={(e) =>
-                              handleItemChange(
-                                index,
-                                "description",
-                                e.target.value
-                              )
-                            }
-                            className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                            placeholder="Mô tả sản phẩm"
-                            rows={2}
-                          />
-                        </div>
-                      </>
-                    ) : (
+                    <div className="grid grid-cols-2 gap-4">
                       <div className="col-span-2">
-                        <label className="block text-xs font-medium text-gray-700 mb-1">
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
                           Chọn sản phẩm <span className="text-red-500">*</span>
                         </label>
                         <select
-                          value={item.product_id}
+                          value={item.product_id === "" ? "" : String(item.product_id)}
+                          onChange={(e) => {
+                            const productId = e.target.value ? Number(e.target.value) : "";
+
+                            handleItemChange(index, "product_id", productId);
+                            
+                            // Tự động điền giá nhập nếu sản phẩm có giá nhập
+                            if (productId) {
+                              const selectedProduct = products.find(
+                                (p) => Number(p.product_id) === Number(productId)
+                              );
+                              if (selectedProduct && selectedProduct.price_purchase) {
+                                handleItemChange(index, "price", selectedProduct.price_purchase);
+                              }
+                            } else {
+                              handleItemChange(index, "price", "");
+                            }
+                          }}
+                          className="w-full px-4 py-2.5 text-sm border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors"
+                          required
+                          disabled={isSubmitting}
+                        >
+                          <option value="">-- Chọn sản phẩm --</option>
+                          {products
+                            .filter((product) => product.product_name && product.product_name.trim() !== "")
+                            .map((product) => (
+                              <option
+                                key={product.product_id}
+                                value={String(product.product_id)}
+                              >
+                                {product.product_name || `Sản phẩm #${product.product_id}`}
+                                {product.price_purchase ? ` - ${formatVND(product.price_purchase)}` : ''} 
+                                (ID: {product.product_id})
+                              </option>
+                            ))}
+                        </select>
+                        {products.length === 0 && (
+                          <p className="mt-1 text-xs text-gray-500">
+                            Chưa có sản phẩm nào. Vui lòng tạo sản phẩm từ trang quản lý sản phẩm.
+                          </p>
+                        )}
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Giá nhập (VND) <span className="text-red-500">*</span>
+                        </label>
+                        <input
+                          type="number"
+                          value={item.price || ""}
                           onChange={(e) =>
                             handleItemChange(
                               index,
-                              "product_id",
+                              "price",
                               e.target.value ? Number(e.target.value) : ""
                             )
                           }
-                          className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                          className="w-full px-4 py-2.5 text-sm border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors"
+                          placeholder="Nhập giá nhập"
+                          min="0"
+                          step="1000"
                           required
-                        >
-                          <option value="">Chọn sản phẩm</option>
-                          {products.map((product) => (
-                            <option
-                              key={product.product_id}
-                              value={product.product_id}
-                            >
-                              {product.product_name} (ID: {product.product_id})
-                            </option>
-                          ))}
-                        </select>
+                        />
+                        {item.price && (
+                          <p className="mt-1.5 text-xs font-medium text-indigo-600">
+                            {formatVND(Number(item.price))}
+                          </p>
+                        )}
                       </div>
-                    )}
-                    <div>
-                      <label className="block text-xs font-medium text-gray-700 mb-1">
-                        Giá nhập <span className="text-red-500">*</span>
-                      </label>
-                      <input
-                        type="number"
-                        value={item.price || ""}
-                        onChange={(e) =>
-                          handleItemChange(
-                            index,
-                            "price",
-                            e.target.value ? Number(e.target.value) : ""
-                          )
-                        }
-                        className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                        placeholder="0"
-                        min="0"
-                        step="1000"
-                        required
-                      />
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Số lượng <span className="text-red-500">*</span>
+                        </label>
+                        <input
+                          type="number"
+                          value={item.quantity || ""}
+                          onChange={(e) =>
+                            handleItemChange(
+                              index,
+                              "quantity",
+                              e.target.value ? Number(e.target.value) : ""
+                            )
+                          }
+                          className="w-full px-4 py-2.5 text-sm border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors"
+                          placeholder="Nhập số lượng"
+                          min="1"
+                          required
+                        />
+                      </div>
                     </div>
-                    <div>
-                      <label className="block text-xs font-medium text-gray-700 mb-1">
-                        Số lượng <span className="text-red-500">*</span>
-                      </label>
-                      <input
-                        type="number"
-                        value={item.quantity || ""}
-                        onChange={(e) =>
-                          handleItemChange(
-                            index,
-                            "quantity",
-                            e.target.value ? Number(e.target.value) : ""
-                          )
-                        }
-                        className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                        placeholder="0"
-                        min="1"
-                        required
-                      />
+                    
+                    {/* Thành tiền với design đẹp hơn */}
+                    <div className="mt-4 pt-4 border-t border-gray-200">
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm font-medium text-gray-700">
+                          Thành tiền:
+                        </span>
+                        <span className="text-lg font-bold text-indigo-600">
+                          {item.price && item.quantity
+                            ? formatVND(Number(item.price) * Number(item.quantity))
+                            : "0 ₫"}
+                        </span>
+                      </div>
                     </div>
                   </div>
-                  <div className="mt-2 text-sm text-gray-600">
-                    Thành tiền:{" "}
-                    <span className="font-semibold text-gray-900">
-                      {item.price && item.quantity
-                        ? formatVND(Number(item.price) * Number(item.quantity))
-                        : "0 ₫"}
-                    </span>
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
 
             <div className="mt-4 p-4 bg-indigo-50 rounded-lg">

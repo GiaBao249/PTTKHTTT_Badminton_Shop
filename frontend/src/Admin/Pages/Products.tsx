@@ -1,6 +1,6 @@
 import { useState } from "react";
-import { Search, Edit, Trash2 } from "lucide-react";
-import { DialogEditProduct, DialogDeleteConfirm } from "../Components";
+import { Search, Edit, Trash2, Plus } from "lucide-react";
+import { DialogAddProduct, DialogEditProduct, DialogDeleteConfirm } from "../Components";
 import { useProducts } from "../hook/useProducts";
 import { useProductItems } from "../hook/useProductItems";
 import { useCategories } from "../hook/useCategories";
@@ -10,6 +10,7 @@ import { toast } from "react-toastify";
 const Products = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCategoryId, setSelectedCategoryId] = useState<number | "">("");
+  const [openAddProduct, setOpenAddProduct] = useState(false);
   const [openEditProduct, setOpenEditProduct] = useState(false);
   const [openDeleteConfirm, setOpenDeleteConfirm] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
@@ -81,10 +82,15 @@ const Products = () => {
     setIsDeleting(true);
     try {
       const API_BASE = import.meta.env.VITE_API_URL;
+      const token = localStorage.getItem("auth_token");
       const response = await fetch(
         `${API_BASE}/api/admin/deleteProduct/${selectedProduct.product_id}`,
         {
           method: "DELETE",
+          headers: {
+            "Content-Type": "application/json",
+            ...(token && { Authorization: `Bearer ${token}` }),
+          },
         }
       );
 
@@ -124,12 +130,14 @@ const Products = () => {
     setIsUpdating(true);
     try {
       const API_BASE = import.meta.env.VITE_API_URL;
+      const token = localStorage.getItem("auth_token");
       const response = await fetch(
         `${API_BASE}/api/admin/updateProduct/${selectedProduct.product_id}`,
         {
           method: "PUT",
           headers: {
             "Content-Type": "application/json",
+            ...(token && { Authorization: `Bearer ${token}` }),
           },
           body: JSON.stringify({
             product_name,
@@ -166,6 +174,13 @@ const Products = () => {
             Quản lý danh sách sản phẩm trong cửa hàng
           </p>
         </div>
+        <button
+          onClick={() => setOpenAddProduct(true)}
+          className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
+        >
+          <Plus size={20} />
+          Thêm sản phẩm
+        </button>
       </div>
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
         <div className="flex items-center gap-4">
@@ -420,6 +435,11 @@ const Products = () => {
           </div>
         </div>
       </div>
+      <DialogAddProduct
+        open={openAddProduct}
+        onClose={() => setOpenAddProduct(false)}
+      />
+
       <DialogEditProduct
         open={openEditProduct}
         onClose={() => {

@@ -14,7 +14,13 @@ interface Customer {
 const API_BASE = import.meta.env.VITE_API_URL;
 
 const fetchCustomers = async (): Promise<Customer[]> => {
-    const res = await fetch(`${API_BASE}/api/admin/getCustomers`);
+    const token = localStorage.getItem("auth_token");
+    const res = await fetch(`${API_BASE}/api/admin/getCustomers`, {
+        headers: {
+            "Content-Type": "application/json",
+            ...(token && { Authorization: `Bearer ${token}` }),
+        },
+    });
     if (!res.ok) {
         throw new Error('Lỗi khi tải danh sách khách hàng');
     }

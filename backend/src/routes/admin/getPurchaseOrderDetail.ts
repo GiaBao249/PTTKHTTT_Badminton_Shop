@@ -1,9 +1,11 @@
 import { Request, Response, Router } from "express";
 import { supabase } from "../../config/supabase";
+import { checkPermission } from "../../middleware/checkPermission";
 
 export function registerGetPurchaseOrderDetail(router: Router) {
   router.get(
     "/getPurchaseOrderDetail/:id",
+    checkPermission("purchase_order:read:detail"),
     async (req: Request, res: Response) => {
       try {
         const purchaseOrderId = parseInt(req.params.id!);

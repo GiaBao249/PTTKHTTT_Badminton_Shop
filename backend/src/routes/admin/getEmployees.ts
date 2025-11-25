@@ -1,8 +1,9 @@
 import { Request, Response, Router } from "express";
 import { supabase } from "../../config/supabase";
+import { checkPermission } from "../../middleware/checkPermission";
 
 export function registerGetEmployees(router: Router) {
-  router.get("/getEmployees", async (req: Request, res: Response) => {
+  router.get("/getEmployees", checkPermission("employee:read"), async (req: Request, res: Response) => {
     try {
       const { data: employees, error } = await supabase
         .from("employees")

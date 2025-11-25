@@ -13,8 +13,15 @@ const API_BASE = import.meta.env.VITE_API_URL;
 const fetchTopSellingProducts = async (
   limit: number = 5
 ): Promise<TopSellingProduct[]> => {
+  const token = localStorage.getItem("auth_token");
   const res = await fetch(
-    `${API_BASE}/api/admin/getTopSellingProducts?limit=${limit}`
+    `${API_BASE}/api/admin/getTopSellingProducts?limit=${limit}`,
+    {
+      headers: {
+        "Content-Type": "application/json",
+        ...(token && { Authorization: `Bearer ${token}` }),
+      },
+    }
   );
   if (!res.ok) {
     throw new Error("Lỗi khi tải sản phẩm bán chạy");

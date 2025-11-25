@@ -10,15 +10,20 @@ import {
   Settings,
   FileText,
   Receipt,
+  Shield,
 } from "lucide-react";
 import { useState } from "react";
 import { useAuth } from "../contexts/AuthContext";
+import { usePermissions } from "./hook/usePermissions";
 
 const AdminLayout = () => {
   const { pathname } = useLocation();
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  
+  // Chỉ gọi usePermissions khi user là admin
+  const { data: permissionsData, isLoading: permissionsLoading, error: permissionsError } = usePermissions();
 
   const active = (path: string) => {
     if (path === "/admin") {
@@ -36,26 +41,37 @@ const AdminLayout = () => {
     navigate("/");
   };
 
-  const menuItems = [
-    { icon: LayoutDashboard, label: "Tổng quan", path: "/admin" },
-    { icon: Package, label: "Sản phẩm", path: "/admin/products" },
-    { icon: ShoppingBag, label: "Đơn hàng", path: "/admin/orders" },
-    { icon: Receipt, label: "Hóa đơn", path: "/admin/invoices" },
-    { icon: FileText, label: "Phiếu nhập", path: "/admin/purchase-orders" },
-    { icon: Users, label: "Khách hàng", path: "/admin/customers" },
+  // Menu items với permissions
+  const allMenuItems = [
+    { icon: LayoutDashboard, label: "Tổng quan", path: "/admin", permission: "dashboard:read" },
+    { icon: Package, label: "Sản phẩm", path: "/admin/products", permission: "product:read" },
+    { icon: ShoppingBag, label: "Đơn hàng", path: "/admin/orders", permission: "order:read" },
+    { icon: Receipt, label: "Hóa đơn", path: "/admin/invoices", permission: "invoice:read" },
+    { icon: FileText, label: "Phiếu nhập", path: "/admin/purchase-orders", permission: "purchase_order:read" },
+    { icon: Users, label: "Khách hàng", path: "/admin/customers", permission: "customer:read" },
+    { icon: Shield, label: "Phân quyền", path: "/admin/permissions", permission: "permission:read" },
   ];
+
+  // Xử lý permissions
+  const permissionCodes = permissionsData?.permissionCodes || [];
+  
+  // Nếu có lỗi hoặc đang load, hiển thị tất cả menu items (để tránh ẩn menu khi có lỗi)
+  // Nếu đã load xong và không có lỗi, chỉ hiển thị items có quyền
+  const menuItems = (permissionsLoading || permissionsError) 
+    ? allMenuItems 
+    : allMenuItems.filter(item => permissionCodes.includes(item.permission));
 
   return (
     <div className="relative min-h-screen bg-gray-50 flex">
       {sidebarOpen && (
         <div
-          className="fixed inset-0 bg-black/50 z-40 lg:hidden"
+          className="fixed inset-0 bg-black/50 z-[55] lg:hidden"
           onClick={() => setSidebarOpen(false)}
         />
       )}
 
       <aside
-        className={`fixed lg:static inset-y-0 left-0 z-50 w-64 bg-white border-r border-gray-200 flex-shrink-0 transform transition-transform duration-300 ease-in-out ${
+        className={`fixed lg:static inset-y-0 left-0 z-[60] w-64 bg-white border-r border-gray-200 flex-shrink-0 transform transition-transform duration-300 ease-in-out ${
           sidebarOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
         }`}
       >
@@ -70,7 +86,7 @@ const AdminLayout = () => {
             </button>
           </div>
 
-          <nav className="flex-1 p-4 space-y-2 overflow-y-auto">
+          <nav className="flex-1 p-4 space-y-2 overflow-y-auto" style={{ position: 'relative', zIndex: 70 }}>
             {menuItems.map((item) => {
               const Icon = item.icon;
               return (
@@ -81,6 +97,7 @@ const AdminLayout = () => {
                   className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${active(
                     item.path
                   )}`}
+                  style={{ position: 'relative', zIndex: 71 }}
                 >
                   <Icon size={20} />
                   <span className="font-medium">{item.label}</span>

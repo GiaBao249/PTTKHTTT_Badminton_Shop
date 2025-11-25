@@ -1,8 +1,9 @@
 import { Request, Response, Router } from "express";
 import { supabase } from "../../config/supabase";
+import { checkPermission } from "../../middleware/checkPermission";
 
 export function registerGetPurchaseOrders(router: Router) {
-  router.get("/getPurchaseOrders", async (req: Request, res: Response) => {
+  router.get("/getPurchaseOrders", checkPermission("purchase_order:read"), async (req: Request, res: Response) => {
     try {
       const { data: purchaseOrders, error: poError } = await supabase
         .from("purchaseorders")

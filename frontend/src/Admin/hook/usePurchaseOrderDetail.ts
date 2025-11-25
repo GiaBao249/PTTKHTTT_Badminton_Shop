@@ -37,8 +37,15 @@ const fetchPurchaseOrderDetail = async (
   purchaseOrderId: number
 ): Promise<PurchaseOrderDetail> => {
   try {
+    const token = localStorage.getItem("auth_token");
     const res = await fetch(
-      `${API_BASE}/api/admin/getPurchaseOrderDetail/${purchaseOrderId}`
+      `${API_BASE}/api/admin/getPurchaseOrderDetail/${purchaseOrderId}`,
+      {
+        headers: {
+          "Content-Type": "application/json",
+          ...(token && { Authorization: `Bearer ${token}` }),
+        },
+      }
     );
     if (!res.ok) {
       const errorData = await res.json().catch(() => ({}));

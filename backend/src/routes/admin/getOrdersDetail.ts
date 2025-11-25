@@ -1,8 +1,9 @@
 import { Router, Request, Response } from "express";
 import { supabase } from "../../config/supabase";
+import { checkPermission } from "../../middleware/checkPermission";
 
 export function registerGetOrdersDetail(router: Router) {
-    router.get("/getOrdersDetail", async (req: Request, res: Response) => {
+    router.get("/getOrdersDetail", checkPermission("order:read:detail"), async (req: Request, res: Response) => {
         const orderId = req.query.order_id;
         if (!orderId || typeof orderId !== 'string') {
             return res.status(400).json({ error: "Thiếu orderId hoặc sai định dạng" });
