@@ -49,19 +49,20 @@ router.post("/login", async (req, res) => {
     }
 
     if (!account) {
-      const res2 = await tryFetch(
-        "adminaccounts",
-        "employees",
-        "employee_id",
-        "name"
-      );
-      if (!res2.error && res2.data) {
+      // Với admin, cần lấy cả 'id' (adminaccounts.id) và 'employee_id'
+      const { data, error } = await supabase
+        .from("adminaccounts")
+        .select(`username,password,id,employee_id,employees(name)`)
+        .eq("username", username)
+        .single();
+      
+      if (!error && data) {
         role = "admin";
-        account = res2.data;
+        account = data;
         meta = {
           accountTable: "adminaccounts",
           joinTable: "employees",
-          idField: "employee_id",
+          idField: "id", // Dùng adminaccounts.id thay vì employee_id
           nameField: "name",
         };
       }

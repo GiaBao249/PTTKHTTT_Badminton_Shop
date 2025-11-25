@@ -10,7 +10,13 @@ interface DashBoardStats {
 }
 
 const fetchDashBoardStats = async (): Promise<DashBoardStats> => {
-    const res = await fetch(`${API_BASE}/api/admin/getDashBoardStats`);
+    const token = localStorage.getItem("auth_token");
+    const res = await fetch(`${API_BASE}/api/admin/getDashBoardStats`, {
+        headers: {
+            "Content-Type": "application/json",
+            ...(token && { Authorization: `Bearer ${token}` }),
+        },
+    });
     if (!res.ok) {
         throw new Error('Lỗi khi tải số liệu tổng quan');
     }   

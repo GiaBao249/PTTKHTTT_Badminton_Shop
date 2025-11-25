@@ -1,11 +1,11 @@
 import { Request, Response, Router } from "express";
 import { supabase } from "../../config/supabase";
-import { authRequired } from "../../middleware/authRequired";
+import { checkPermission } from "../../middleware/checkPermission";
 
 export function registerGetInvoices(router: Router) {
   router.get(
     "/getInvoices",
-    authRequired,
+    checkPermission("invoice:read"),
     async (req: Request, res: Response) => {
       try {
         const { startDate, endDate, status } = req.query;
@@ -248,7 +248,7 @@ export function registerGetInvoices(router: Router) {
 
   router.get(
     "/getInvoice/:orderId",
-    authRequired,
+    checkPermission("invoice:read:detail"),
     async (req: Request, res: Response) => {
       try {
         const orderId = parseInt(req.params.orderId as string);

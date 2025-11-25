@@ -10,7 +10,13 @@ interface OrderDetail {
 const API_BASE = import.meta.env.VITE_API_URL;
 
 const fetchOrderDetails = async (orderId: number): Promise<OrderDetail[]> => {
-    const res = await fetch(`${API_BASE}/api/admin/getOrdersDetail?order_id=${orderId}`);
+    const token = localStorage.getItem("auth_token");
+    const res = await fetch(`${API_BASE}/api/admin/getOrdersDetail?order_id=${orderId}`, {
+        headers: {
+            "Content-Type": "application/json",
+            ...(token && { Authorization: `Bearer ${token}` }),
+        },
+    });
     if (!res.ok) {
         throw new Error('Lỗi khi tải chi tiết đơn hàng');
     }

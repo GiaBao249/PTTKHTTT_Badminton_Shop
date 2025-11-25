@@ -1,7 +1,9 @@
 import { Request, Response, Router } from "express";
 import { supabase } from "../../config/supabase";
+import { checkPermission } from "../../middleware/checkPermission";
+
 export function registerDashBoardAdmin(router: Router) {
-  router.get("/getDashBoardStats", async (req: Request, res: Response) => {
+  router.get("/getDashBoardStats", checkPermission("dashboard:read"), async (req: Request, res: Response) => {
     try {
       const { data: orders, error: ordersError } = await supabase
         .from("orders")

@@ -1,8 +1,9 @@
 import { Router, Request, Response } from "express";
 import { supabase } from "../../config/supabase";
+import { checkPermission } from "../../middleware/checkPermission";
 
 export function registerUpdateOrderStatus(router: Router) {
-  router.patch("/updateOrderStatus", async (req: Request, res: Response) => {
+  router.patch("/updateOrderStatus", checkPermission("order:update"), async (req: Request, res: Response) => {
     const { order_id, status } = req.body;
 
     if (!order_id) {

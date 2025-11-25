@@ -18,10 +18,12 @@ interface Order {
 }
 
 const updateOrderStatus = async ({ order_id, status }: UpdateOrderStatusParams) => {
+    const token = localStorage.getItem("auth_token");
     const res = await fetch(`${API_BASE}/api/admin/updateOrderStatus`, {
         method: 'PATCH',
         headers: {
             'Content-Type': 'application/json',
+            ...(token && { Authorization: `Bearer ${token}` }),
         },
         body: JSON.stringify({ order_id, status }),
     });

@@ -1,8 +1,9 @@
 import { Request, Response, Router } from "express";
 import { supabase } from "../../config/supabase";
+import { checkPermission } from "../../middleware/checkPermission";
 
 export function registerGetCustomers (router: Router) {
-    router.get('/getCustomers', async (req: Request, res: Response) => {
+    router.get('/getCustomers', checkPermission("customer:read"), async (req: Request, res: Response) => {
         try {
             const { data: customers, error: customerError} = await supabase.from("customer").select("*");
             if (customerError) {

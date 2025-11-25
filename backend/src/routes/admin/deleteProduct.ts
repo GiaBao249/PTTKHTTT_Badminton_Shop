@@ -1,8 +1,9 @@
 import { Request, Response, Router } from "express";
 import { supabase } from "../../config/supabase";
+import { checkPermission } from "../../middleware/checkPermission";
 
 export function registerDeleteProduct(router: Router) {
-  router.delete("/deleteProduct/:id", async (req: Request, res: Response) => {
+  router.delete("/deleteProduct/:id", checkPermission("product:delete"), async (req: Request, res: Response) => {
     try {
       const productId = parseInt(req.params.id || "0");
 

@@ -82,10 +82,15 @@ const Products = () => {
     setIsDeleting(true);
     try {
       const API_BASE = import.meta.env.VITE_API_URL;
+      const token = localStorage.getItem("auth_token");
       const response = await fetch(
         `${API_BASE}/api/admin/deleteProduct/${selectedProduct.product_id}`,
         {
           method: "DELETE",
+          headers: {
+            "Content-Type": "application/json",
+            ...(token && { Authorization: `Bearer ${token}` }),
+          },
         }
       );
 
@@ -125,12 +130,14 @@ const Products = () => {
     setIsUpdating(true);
     try {
       const API_BASE = import.meta.env.VITE_API_URL;
+      const token = localStorage.getItem("auth_token");
       const response = await fetch(
         `${API_BASE}/api/admin/updateProduct/${selectedProduct.product_id}`,
         {
           method: "PUT",
           headers: {
             "Content-Type": "application/json",
+            ...(token && { Authorization: `Bearer ${token}` }),
           },
           body: JSON.stringify({
             product_name,

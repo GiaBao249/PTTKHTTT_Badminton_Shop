@@ -378,12 +378,14 @@ const PurchaseOrders = () => {
     setIsSubmitting(true);
     try {
       const API_BASE = import.meta.env.VITE_API_URL;
+      const token = localStorage.getItem("auth_token");
       const response = await fetch(
         `${API_BASE}/api/admin/createPurchaseOrder`,
         {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
+            ...(token && { Authorization: `Bearer ${token}` }),
           },
           body: JSON.stringify({
             supplier_id: supplierId,
@@ -832,13 +834,13 @@ const PurchaseOrders = () => {
                           {selectedProduct.thumbnail && (
                             <img
                               src={selectedProduct.thumbnail}
-                              alt={selectedProduct.product_name}
+                              alt={selectedProduct.product_name || `Sản phẩm ${selectedProduct.product_id}`}
                               className="w-16 h-16 rounded-lg object-cover border border-gray-200"
                             />
                           )}
                           <div className="flex-1">
                             <p className="font-semibold text-gray-900 text-sm">
-                              {selectedProduct.product_name}
+                              {selectedProduct.product_name || `Sản phẩm #${selectedProduct.product_id}`}
                             </p>
                             <p className="text-xs text-gray-600 mt-1">
                               ID: {selectedProduct.product_id}
@@ -880,16 +882,18 @@ const PurchaseOrders = () => {
                           disabled={isSubmitting}
                         >
                           <option value="">-- Chọn sản phẩm --</option>
-                          {products.map((product) => (
-                            <option
-                              key={product.product_id}
-                              value={String(product.product_id)}
-                            >
-                              {product.product_name} 
-                              {product.price_purchase ? ` - ${formatVND(product.price_purchase)}` : ''} 
-                              (ID: {product.product_id})
-                            </option>
-                          ))}
+                          {products
+                            .filter((product) => product.product_name && product.product_name.trim() !== "")
+                            .map((product) => (
+                              <option
+                                key={product.product_id}
+                                value={String(product.product_id)}
+                              >
+                                {product.product_name || `Sản phẩm #${product.product_id}`}
+                                {product.price_purchase ? ` - ${formatVND(product.price_purchase)}` : ''} 
+                                (ID: {product.product_id})
+                              </option>
+                            ))}
                         </select>
                         {products.length === 0 && (
                           <p className="mt-1 text-xs text-gray-500">

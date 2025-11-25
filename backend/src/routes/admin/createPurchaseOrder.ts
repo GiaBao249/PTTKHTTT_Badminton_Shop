@@ -1,8 +1,9 @@
 import { Request, Response, Router } from "express";
 import { supabase } from "../../config/supabase";
+import { checkPermission } from "../../middleware/checkPermission";
 
 export function registerCreatePurchaseOrder(router: Router) {
-  router.post("/createPurchaseOrder", async (req: Request, res: Response) => {
+  router.post("/createPurchaseOrder", checkPermission("purchase_order:create"), async (req: Request, res: Response) => {
     try {
       const { supplier_id, employee_id, items } = req.body;
 

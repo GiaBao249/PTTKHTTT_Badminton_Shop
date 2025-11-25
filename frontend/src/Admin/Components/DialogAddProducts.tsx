@@ -21,8 +21,8 @@ export const Dialog = ({
   const maxWidthClasses = {
     sm: "max-w-sm",
     md: "max-w-md",
-    lg: "max-w-lg",
-    xl: "max-w-xl",
+    lg: "max-w-2xl",
+    xl: "max-w-4xl",
   };
 
   return (
@@ -30,6 +30,7 @@ export const Dialog = ({
       <div
         className="fixed inset-0 bg-black/50 backdrop-blur-sm"
         onClick={onClose}
+        style={{ pointerEvents: 'auto' }}
       />
       <div
         className={`relative bg-white rounded-xl shadow-2xl ${maxWidthClasses[maxWidth]} w-full z-50 max-h-[90vh] overflow-hidden flex flex-col`}

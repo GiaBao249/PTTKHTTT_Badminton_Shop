@@ -19,7 +19,13 @@ const API_BASE = import.meta.env.VITE_API_URL;
 
 const fetchPurchaseOrders = async (): Promise<PurchaseOrder[]> => {
   try {
-    const res = await fetch(`${API_BASE}/api/admin/getPurchaseOrders`);
+    const token = localStorage.getItem("auth_token");
+    const res = await fetch(`${API_BASE}/api/admin/getPurchaseOrders`, {
+      headers: {
+        "Content-Type": "application/json",
+        ...(token && { Authorization: `Bearer ${token}` }),
+      },
+    });
     if (!res.ok) {
       const errorData = await res.json().catch(() => ({}));
       console.error("Lỗi khi lấy phiếu nhập:", errorData);

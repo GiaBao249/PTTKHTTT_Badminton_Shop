@@ -1,8 +1,9 @@
 import { Request, Response, Router } from "express";
 import { supabase } from "../../config/supabase";
+import { checkPermission } from "../../middleware/checkPermission";
 
 export function registerGetProduct(router: Router) {
-  router.get("/getProducts", async (req: Request, res: Response) => {
+  router.get("/getProducts", checkPermission("product:read"), async (req: Request, res: Response) => {
     try {
       const { data: products, error } = await supabase
         .from("product")

@@ -1,8 +1,9 @@
 import { Request, Response, Router } from "express";
 import { supabase } from "../../config/supabase";
+import { checkPermission } from "../../middleware/checkPermission";
 
 export function registerCreateProduct(router: Router) {
-  router.post("/createProducts", async (req: Request, res: Response) => {
+  router.post("/createProducts", checkPermission("product:create"), async (req: Request, res: Response) => {
     try {
       const {
         product_name,
@@ -76,28 +77,22 @@ export function registerCreateProduct(router: Router) {
 
       // Tạo ProductItem và ProductConfiguration cho mỗi item
       for (const item of items) {
-        const { quantity, variation_option_ids } = item;
+        const { variation_option_ids } = item;
 
         // Validation item
-        if (!quantity || quantity <= 0) {
-          return res.status(400).json({
-            error: "Số lượng phải lớn hơn 0",
-          });
-        }
-
         if (!variation_option_ids || !Array.isArray(variation_option_ids) || variation_option_ids.length === 0) {
           return res.status(400).json({
             error: "Mỗi item cần ít nhất một variation option",
           });
         }
 
-        // Tạo ProductItem
+        // Tạo ProductItem với quantity = 0 (số lượng sẽ được nhập qua phiếu nhập)
         const { data: newProductItem, error: itemError } = await supabase
           .from("product_item")
           .insert([
             {
               product_id: productId,
-              quantity: quantity,
+              quantity: 0,
             },
           ])
           .select()

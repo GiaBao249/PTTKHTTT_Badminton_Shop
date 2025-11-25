@@ -1,8 +1,9 @@
 import { Request, Response, Router } from "express";
 import { supabase } from "../../config/supabase";
+import { checkPermission } from "../../middleware/checkPermission";
 
 export function registerUpdateProduct(router: Router) {
-  router.put("/updateProduct/:id", async (req: Request, res: Response) => {
+  router.put("/updateProduct/:id", checkPermission("product:update"), async (req: Request, res: Response) => {
     try {
       const productId = parseInt(req.params.id);
       const { product_name, category_id, price } = req.body;

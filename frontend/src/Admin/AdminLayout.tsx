@@ -49,13 +49,13 @@ const AdminLayout = () => {
     <div className="relative min-h-screen bg-gray-50 flex">
       {sidebarOpen && (
         <div
-          className="fixed inset-0 bg-black/50 z-40 lg:hidden"
+          className="fixed inset-0 bg-black/50 z-[55] lg:hidden"
           onClick={() => setSidebarOpen(false)}
         />
       )}
 
       <aside
-        className={`fixed lg:static inset-y-0 left-0 z-50 w-64 bg-white border-r border-gray-200 flex-shrink-0 transform transition-transform duration-300 ease-in-out ${
+        className={`fixed lg:static inset-y-0 left-0 z-[60] w-64 bg-white border-r border-gray-200 flex-shrink-0 transform transition-transform duration-300 ease-in-out ${
           sidebarOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
         }`}
       >
@@ -70,7 +70,7 @@ const AdminLayout = () => {
             </button>
           </div>
 
-          <nav className="flex-1 p-4 space-y-2 overflow-y-auto">
+          <nav className="flex-1 p-4 space-y-2 overflow-y-auto" style={{ position: 'relative', zIndex: 70 }}>
             {menuItems.map((item) => {
               const Icon = item.icon;
               return (
@@ -81,6 +81,7 @@ const AdminLayout = () => {
                   className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${active(
                     item.path
                   )}`}
+                  style={{ position: 'relative', zIndex: 71 }}
                 >
                   <Icon size={20} />
                   <span className="font-medium">{item.label}</span>

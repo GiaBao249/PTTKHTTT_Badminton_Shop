@@ -1,8 +1,9 @@
 import { Request, Response, Router } from "express";
 import { supabase } from "../../config/supabase";
+import { checkPermission } from "../../middleware/checkPermission";
 
 export function registerGetTopSellingProducts(router: Router) {
-  router.get("/getTopSellingProducts", async (req: Request, res: Response) => {
+  router.get("/getTopSellingProducts", checkPermission("dashboard:read:top_products"), async (req: Request, res: Response) => {
     try {
       const limit = parseInt(req.query.limit as string) || 5;
 
