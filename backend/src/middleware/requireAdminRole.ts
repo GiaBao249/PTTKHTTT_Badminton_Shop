@@ -99,6 +99,7 @@ export const requireAdminRole = async (
       }
       
       // Nếu đã có admin khác có roles, từ chối truy cập
+      console.log(`❌ [requireAdminRole] Admin ${adminId} KHÔNG CÓ ROLES. Có ${allAdminRoles?.length || 0} admin khác đã có roles.`);
       return res.status(403).json({ 
         error: "Access denied. Bạn không có quyền truy cập. Vui lòng liên hệ quản trị viên để được cấp quyền." 
       });
