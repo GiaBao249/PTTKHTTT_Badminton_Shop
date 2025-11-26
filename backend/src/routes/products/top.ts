@@ -61,7 +61,11 @@ export function registerTopByCategoryRoutes(router: Router) {
       (productItemList ?? []).forEach((it: any) => {
         const firstImage = it.product_image?.[0]?.image_filename;
         if (it.product_id && firstImage && !idToThumbnail.has(it.product_id)) {
-          idToThumbnail.set(it.product_id, firstImage);
+          // Get public URL from Supabase Storage
+          const { data: { publicUrl } } = supabase.storage
+            .from("product-images")
+            .getPublicUrl(firstImage);
+          idToThumbnail.set(it.product_id, publicUrl);
         }
       });
 

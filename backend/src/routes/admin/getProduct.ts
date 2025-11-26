@@ -43,7 +43,11 @@ export function registerGetProduct(router: Router) {
       (productItems ?? []).forEach((item) => {
         const firstImage = item.product_image?.[0]?.image_filename;
         if (item.product_id && firstImage && !thumbnailMap.has(item.product_id)) {
-          thumbnailMap.set(item.product_id, firstImage);
+          // Get public URL from Supabase Storage
+          const { data: { publicUrl } } = supabase.storage
+            .from("product-images")
+            .getPublicUrl(firstImage);
+          thumbnailMap.set(item.product_id, publicUrl);
         }
       });
 

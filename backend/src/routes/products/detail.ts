@@ -61,10 +61,17 @@ export function registerDetailRoutes(router: Router) {
           product_item_id: it.product_item_id,
           product_id: it.product_id,
           quantity: it.quantity,
-          images: (it.product_image ?? []).map((img: any) => ({
-            image_id: img.image_id,
-            image_filename: img.image_filename,
-          })),
+          images: (it.product_image ?? []).map((img: any) => {
+            // Get public URL from Supabase Storage
+            const { data: { publicUrl } } = supabase.storage
+              .from("product-images")
+              .getPublicUrl(img.image_filename);
+            return {
+              image_id: img.image_id,
+              image_filename: img.image_filename,
+              image_url: publicUrl,
+            };
+          }),
           attributes: (it.product_configuration ?? []).map((cfg: any) => ({
             variation_option_id: cfg.variation_option_id,
             value: cfg.variation_options?.value,

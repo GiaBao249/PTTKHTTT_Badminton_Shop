@@ -49,12 +49,16 @@ export function registerGetPurchaseOrderDetail(router: Router) {
         if (purchaseOrder.employee_id) {
           const { data: employeeData, error: employeeError } = await supabase
             .from("employees")
-            .select("employee_id, name")
-            .eq("employee_id", purchaseOrder.employee_id)
+            .select("employ_id, name")
+            .eq("employ_id", purchaseOrder.employee_id)
             .single();
 
           if (!employeeError && employeeData) {
-            employee = employeeData;
+            // Map employ_id to employee_id for frontend compatibility
+            employee = {
+              ...employeeData,
+              employee_id: employeeData.employ_id,
+            };
           } else {
             console.warn("Lỗi khi lấy nhân viên:", employeeError);
           }
@@ -98,7 +102,11 @@ export function registerGetPurchaseOrderDetail(router: Router) {
               (productItems ?? []).forEach((item: any) => {
                 const firstImage = item.product_image?.[0]?.image_filename;
                 if (item.product_id && firstImage && !thumbnailMap.has(item.product_id)) {
-                  thumbnailMap.set(item.product_id, firstImage);
+                  // Get public URL from Supabase Storage
+                  const { data: { publicUrl } } = supabase.storage
+                    .from("product-images")
+                    .getPublicUrl(firstImage);
+                  thumbnailMap.set(item.product_id, publicUrl);
                 }
               });
             }

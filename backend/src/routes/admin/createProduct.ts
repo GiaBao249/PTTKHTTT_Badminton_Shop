@@ -75,15 +75,17 @@ export function registerCreateProduct(router: Router) {
 
       const productId = newProduct.product_id;
 
+      const createdItems: any[] = [];
+
       // Tạo ProductItem và ProductConfiguration cho mỗi item
       for (const item of items) {
         const { variation_option_ids } = item;
 
-        // Validation item
-        if (!variation_option_ids || !Array.isArray(variation_option_ids) || variation_option_ids.length === 0) {
-          return res.status(400).json({
-            error: "Mỗi item cần ít nhất một variation option",
-          });
+        // Validation item - cho phép variation_option_ids rỗng nếu không có variations
+        if (!variation_option_ids || !Array.isArray(variation_option_ids)) {
+          // Nếu không có variation_option_ids, tạo item rỗng
+          const variation_option_ids_empty: number[] = [];
+          item.variation_option_ids = variation_option_ids_empty;
         }
 
         // Tạo ProductItem với quantity = 0 (số lượng sẽ được nhập qua phiếu nhập)
@@ -111,25 +113,33 @@ export function registerCreateProduct(router: Router) {
 
         const productItemId = newProductItem.product_item_id;
 
-        // Tạo ProductConfiguration cho mỗi variation_option_id
-        const configurations = variation_option_ids.map((optionId: number) => ({
-          product_item_id: productItemId,
-          variation_option_id: optionId,
-        }));
+        // Tạo ProductConfiguration cho mỗi variation_option_id (chỉ khi có)
+        if (variation_option_ids && variation_option_ids.length > 0) {
+          const configurations = variation_option_ids.map((optionId: number) => ({
+            product_item_id: productItemId,
+            variation_option_id: optionId,
+          }));
 
-        const { error: configError } = await supabase
-          .from("product_configuration")
-          .insert(configurations);
+          const { error: configError } = await supabase
+            .from("product_configuration")
+            .insert(configurations);
 
-        if (configError) {
-          console.error("Lỗi khi tạo product_configuration:", configError);
-          throw configError;
+          if (configError) {
+            console.error("Lỗi khi tạo product_configuration:", configError);
+            throw configError;
+          }
         }
+
+        createdItems.push({
+          product_item_id: productItemId,
+          variation_option_ids: variation_option_ids || [],
+        });
       }
 
       res.status(201).json({
         success: true,
         product: newProduct,
+        product_items: createdItems,
         message: "Tạo sản phẩm thành công",
       });
     } catch (error: any) {
