@@ -18,6 +18,7 @@ import Invoices from "./Admin/Pages/Invoices";
 import Customers from "./Admin/Pages/Customers";
 import PurchaseOrders from "./Admin/Pages/PurchaseOrders";
 import Permissions from "./Admin/Pages/Permissions";
+import Statistics from "./Admin/Pages/Statistics";
 import { useAuth } from "./contexts/AuthContext";
 import { useEffect } from "react";
 import OrderResultCheckout from "./Components/OrderResultCheckout";
@@ -175,6 +176,24 @@ const App = () => {
                 }
               >
                 <Permissions />
+              </RequirePermission>
+            } 
+          />
+          <Route 
+            path="statistics" 
+            element={
+              <RequirePermission 
+                permission="dashboard:read"
+                fallback={
+                  <div className="flex items-center justify-center min-h-screen">
+                    <div className="text-center">
+                      <h2 className="text-2xl font-bold text-gray-800 mb-2">Không có quyền truy cập</h2>
+                      <p className="text-gray-600">Bạn không có quyền xem thống kê. Vui lòng liên hệ quản trị viên.</p>
+                    </div>
+                  </div>
+                }
+              >
+                <Statistics />
               </RequirePermission>
             } 
           />
