@@ -11,6 +11,7 @@ import {
   FileText,
   Receipt,
   Shield,
+  BarChart3,
 } from "lucide-react";
 import { useState } from "react";
 import { useAuth } from "../contexts/AuthContext";
@@ -49,6 +50,7 @@ const AdminLayout = () => {
     { icon: Receipt, label: "Hóa đơn", path: "/admin/invoices", permission: "invoice:read" },
     { icon: FileText, label: "Phiếu nhập", path: "/admin/purchase-orders", permission: "purchase_order:read" },
     { icon: Users, label: "Khách hàng", path: "/admin/customers", permission: "customer:read" },
+    { icon: BarChart3, label: "Thống kê", path: "/admin/statistics", permission: "dashboard:read" },
     { icon: Shield, label: "Phân quyền", path: "/admin/permissions", permission: "permission:read" },
   ];
 
