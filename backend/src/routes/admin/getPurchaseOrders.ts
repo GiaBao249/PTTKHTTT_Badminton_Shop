@@ -48,21 +48,26 @@ export function registerGetPurchaseOrders(router: Router) {
         employeeIds.length > 0
           ? await supabase
               .from("employees")
-              .select("employee_id, name")
-              .in("employee_id", employeeIds)
+              .select("employ_id, name")
+              .in("employ_id", employeeIds)
           : { data: [], error: null };
 
       if (employeesError) {
         console.warn("Error fetching employees:", employeesError);
       }
 
-      const result = purchaseOrders.map((po: any) => ({
-        ...po,
-        supplier:
-          suppliers?.find((s: any) => s.supplier_id === po.supplier_id) || null,
-        employee:
-          employees?.find((e: any) => e.employee_id === po.employee_id) || null,
-      }));
+      const result = purchaseOrders.map((po: any) => {
+        const employee = employees?.find((e: any) => e.employ_id === po.employee_id);
+        return {
+          ...po,
+          supplier:
+            suppliers?.find((s: any) => s.supplier_id === po.supplier_id) || null,
+          employee: employee ? {
+            ...employee,
+            employee_id: employee.employ_id, // Map for frontend compatibility
+          } : null,
+        };
+      });
 
       res.json(result);
     } catch (error: any) {

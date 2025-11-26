@@ -326,12 +326,19 @@ const PurchaseOrders = () => {
   ) => {
     const newItems = [...items];
     newItems[index] = { ...newItems[index], [field]: value };
+    console.log("handleItemChange - field:", field, "value:", value, "type:", typeof value);
+    console.log("newItems after update:", newItems);
+    console.log("Updated item:", newItems[index]);
     
     // Khi chọn sản phẩm có sẵn, tự động điền giá nhập nếu có
     if (field === "product_id" && value) {
-      const selectedProduct = products.find((p) => p.product_id === value);
+      const selectedProduct = products.find(
+        (p) => Number(p.product_id) === Number(value)
+      );
+      console.log("Finding product with value:", value, "Found:", selectedProduct);
       if (selectedProduct && selectedProduct.price_purchase) {
         newItems[index].price = selectedProduct.price_purchase;
+        console.log("Auto-filled price:", selectedProduct.price_purchase);
       }
     }
     
@@ -799,6 +806,9 @@ const PurchaseOrders = () => {
                 const selectedProduct = item.product_id !== "" && item.product_id !== null && item.product_id !== undefined
                   ? products.find((p) => Number(p.product_id) === Number(item.product_id))
                   : null;
+                
+                // Debug: Log current item state
+                console.log(`Item ${index} - product_id:`, item.product_id, "type:", typeof item.product_id);
 
                 return (
                   <div
@@ -859,23 +869,35 @@ const PurchaseOrders = () => {
                           Chọn sản phẩm <span className="text-red-500">*</span>
                         </label>
                         <select
-                          value={item.product_id === "" ? "" : String(item.product_id)}
+                          key={`product-select-${index}-${item.product_id || 'empty'}`}
+                          value={
+                            item.product_id === "" || item.product_id === null || item.product_id === undefined || item.product_id === 0
+                              ? ""
+                              : String(item.product_id)
+                          }
                           onChange={(e) => {
                             const productId = e.target.value ? Number(e.target.value) : "";
+                            console.log("Select onChange - productId:", productId, "type:", typeof productId);
+                            console.log("Current item.product_id:", item.product_id, "type:", typeof item.product_id);
 
-                            handleItemChange(index, "product_id", productId);
+                            // Update product_id
+                            const newItems = [...items];
+                            newItems[index] = { ...newItems[index], product_id: productId };
                             
                             // Tự động điền giá nhập nếu sản phẩm có giá nhập
                             if (productId) {
                               const selectedProduct = products.find(
                                 (p) => Number(p.product_id) === Number(productId)
                               );
+                              console.log("Selected product:", selectedProduct);
                               if (selectedProduct && selectedProduct.price_purchase) {
-                                handleItemChange(index, "price", selectedProduct.price_purchase);
+                                newItems[index].price = selectedProduct.price_purchase;
                               }
                             } else {
-                              handleItemChange(index, "price", "");
+                              newItems[index].price = "";
                             }
+                            
+                            setItems(newItems);
                           }}
                           className="w-full px-4 py-2.5 text-sm border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors"
                           required
@@ -883,7 +905,18 @@ const PurchaseOrders = () => {
                         >
                           <option value="">-- Chọn sản phẩm --</option>
                           {products
-                            .filter((product) => product.product_name && product.product_name.trim() !== "")
+                            .filter((product) => {
+                              // Loại trừ sản phẩm đã được chọn trong các item khác (nhưng không loại trừ item hiện tại)
+                              const isAlreadySelectedInOtherItems = items.some(
+                                (otherItem, otherIndex) =>
+                                  otherIndex !== index &&
+                                  otherItem.product_id !== "" &&
+                                  otherItem.product_id !== null &&
+                                  otherItem.product_id !== undefined &&
+                                  Number(otherItem.product_id) === Number(product.product_id)
+                              );
+                              return !isAlreadySelectedInOtherItems;
+                            })
                             .map((product) => (
                               <option
                                 key={product.product_id}
@@ -1150,6 +1183,17 @@ const PurchaseOrders = () => {
                                         }
                                         className="w-full h-full object-cover"
                                         loading="lazy"
+                                        onError={(e) => {
+                                          // Ẩn ảnh và hiển thị placeholder khi lỗi
+                                          e.currentTarget.style.display = 'none';
+                                          const parent = e.currentTarget.parentElement;
+                                          if (parent) {
+                                            const placeholder = document.createElement('span');
+                                            placeholder.className = 'text-xs text-gray-400';
+                                            placeholder.textContent = 'No image';
+                                            parent.appendChild(placeholder);
+                                          }
+                                        }}
                                       />
                                     ) : (
                                       <span className="text-xs text-gray-400">

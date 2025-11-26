@@ -5,7 +5,7 @@ import { useSuppliers } from "../hook/useSuppliers";
 import { useVariations } from "../hook/useVariations";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "react-toastify";
-import { Plus, X } from "lucide-react";
+import { Plus, X, Upload, Image as ImageIcon } from "lucide-react";
 
 interface DialogAddProductProps {
   open: boolean;
@@ -14,6 +14,8 @@ interface DialogAddProductProps {
 
 interface ProductItem {
   variation_option_ids: number[];
+  images?: File[];
+  imagePreviews?: string[];
 }
 
 export const DialogAddProduct = ({ open, onClose }: DialogAddProductProps) => {
@@ -112,6 +114,75 @@ export const DialogAddProduct = ({ open, onClose }: DialogAddProductProps) => {
     setProductItems((prev) => prev.filter((_, i) => i !== index));
   };
 
+  const handleImageChange = (itemIndex: number, files: FileList | null) => {
+    if (!files || files.length === 0) return;
+
+    const newFiles = Array.from(files);
+    const previews = newFiles.map((file) => URL.createObjectURL(file));
+
+    setProductItems((prev) => {
+      const updated = [...prev];
+      const currentImages = updated[itemIndex].images || [];
+      const currentPreviews = updated[itemIndex].imagePreviews || [];
+      
+      updated[itemIndex] = {
+        ...updated[itemIndex],
+        images: [...currentImages, ...newFiles],
+        imagePreviews: [...currentPreviews, ...previews],
+      };
+      return updated;
+    });
+  };
+
+  const handleRemoveImage = (itemIndex: number, imageIndex: number) => {
+    setProductItems((prev) => {
+      const updated = [...prev];
+      const currentImages = updated[itemIndex].images || [];
+      const currentPreviews = updated[itemIndex].imagePreviews || [];
+      
+      // Revoke object URL to free memory
+      if (currentPreviews[imageIndex]) {
+        URL.revokeObjectURL(currentPreviews[imageIndex]);
+      }
+      
+      updated[itemIndex] = {
+        ...updated[itemIndex],
+        images: currentImages.filter((_, i) => i !== imageIndex),
+        imagePreviews: currentPreviews.filter((_, i) => i !== imageIndex),
+      };
+      return updated;
+    });
+  };
+
+  const uploadImage = async (productItemId: number, imageFile: File): Promise<boolean> => {
+    try {
+      const API_BASE = import.meta.env.VITE_API_URL;
+      const token = localStorage.getItem("auth_token");
+      
+      const formData = new FormData();
+      formData.append("image", imageFile);
+      formData.append("product_item_id", productItemId.toString());
+
+      const response = await fetch(`${API_BASE}/api/admin/uploadImage`, {
+        method: "POST",
+        headers: {
+          ...(token && { Authorization: `Bearer ${token}` }),
+        },
+        body: formData,
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || "Lỗi khi upload ảnh");
+      }
+
+      return true;
+    } catch (error: any) {
+      console.error("Error uploading image:", error);
+      throw error;
+    }
+  };
+
   const getVariationOptionLabel = (optionId: number): string => {
     for (const variation of variations) {
       const option = variation.variation_options.find((opt) => opt.variation_option_id === optionId);
@@ -190,7 +261,45 @@ export const DialogAddProduct = ({ open, onClose }: DialogAddProductProps) => {
         throw new Error(error.error || "Không thể tạo sản phẩm");
       }
 
-      await response.json();
+      const result = await response.json();
+
+      // Upload images for each product item
+      if (result.product_items && result.product_items.length > 0) {
+        const uploadPromises: Promise<void>[] = [];
+        let uploadCount = 0;
+        let errorCount = 0;
+        
+        result.product_items.forEach((createdItem: any, index: number) => {
+          const item = itemsToSend[index];
+          if (item.images && item.images.length > 0) {
+            item.images.forEach((imageFile: File) => {
+              uploadCount++;
+              uploadPromises.push(
+                uploadImage(createdItem.product_item_id, imageFile)
+                  .then(() => {
+                    console.log(`Successfully uploaded image for item ${index + 1}`);
+                  })
+                  .catch((error) => {
+                    errorCount++;
+                    console.error(`Error uploading image for item ${index + 1}:`, error);
+                    const errorMessage = error.message || "Lỗi không xác định";
+                    toast.error(`Lỗi khi upload ảnh cho biến thể #${index + 1}: ${errorMessage}`);
+                  })
+              );
+            });
+          }
+        });
+
+        // Wait for all image uploads to complete
+        if (uploadPromises.length > 0) {
+          await Promise.all(uploadPromises);
+          if (errorCount === 0) {
+            toast.success(`Đã upload thành công ${uploadCount} ảnh!`);
+          } else if (errorCount < uploadCount) {
+            toast.warning(`Đã upload ${uploadCount - errorCount}/${uploadCount} ảnh thành công`);
+          }
+        }
+      }
 
       // Invalidate queries to refresh data
       queryClient.invalidateQueries({ queryKey: ["products"] });
@@ -209,6 +318,12 @@ export const DialogAddProduct = ({ open, onClose }: DialogAddProductProps) => {
 
       setSelectedCategoryId(null);
       setSelectedVariations({});
+      // Clean up image previews
+      productItems.forEach((item) => {
+        if (item.imagePreviews) {
+          item.imagePreviews.forEach((preview) => URL.revokeObjectURL(preview));
+        }
+      });
       setProductItems([]);
 
       // Close dialog after reset
@@ -465,6 +580,55 @@ export const DialogAddProduct = ({ open, onClose }: DialogAddProductProps) => {
                         >
                           <X size={18} />
                         </button>
+                      )}
+                    </div>
+
+                    {/* Image Upload Section */}
+                    <div className="mt-4 space-y-2">
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Hình ảnh sản phẩm
+                      </label>
+                      <div className="flex items-center gap-2">
+                        <label className="flex items-center gap-2 px-3 py-2 bg-indigo-50 text-indigo-700 rounded-lg cursor-pointer hover:bg-indigo-100 transition-colors">
+                          <Upload size={16} />
+                          <span className="text-sm">Chọn ảnh</span>
+                          <input
+                            type="file"
+                            accept="image/*"
+                            multiple
+                            className="hidden"
+                            onChange={(e) => handleImageChange(index, e.target.files)}
+                            disabled={isCreating}
+                          />
+                        </label>
+                        {item.images && item.images.length > 0 && (
+                          <span className="text-sm text-gray-500">
+                            ({item.images.length} ảnh đã chọn)
+                          </span>
+                        )}
+                      </div>
+                      
+                      {/* Image Previews */}
+                      {item.imagePreviews && item.imagePreviews.length > 0 && (
+                        <div className="grid grid-cols-4 gap-2 mt-2">
+                          {item.imagePreviews.map((preview, imgIndex) => (
+                            <div key={imgIndex} className="relative group">
+                              <img
+                                src={preview}
+                                alt={`Preview ${imgIndex + 1}`}
+                                className="w-full h-24 object-cover rounded-lg border border-gray-200"
+                              />
+                              <button
+                                type="button"
+                                onClick={() => handleRemoveImage(index, imgIndex)}
+                                className="absolute top-1 right-1 p-1 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                                disabled={isCreating}
+                              >
+                                <X size={14} />
+                              </button>
+                            </div>
+                          ))}
+                        </div>
                       )}
                     </div>
                   </div>
