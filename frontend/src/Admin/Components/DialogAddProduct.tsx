@@ -207,9 +207,6 @@ export const DialogAddProduct = ({ open, onClose }: DialogAddProductProps) => {
         ? Number(formData.get("supplier_id"))
         : null;
       const price = Number(formData.get("price"));
-      const price_purchase = formData.get("price_purchase")
-        ? Number(formData.get("price_purchase"))
-        : null;
       const description = (formData.get("description") as string) || "";
       const warranty_period = formData.get("warranty_period")
         ? Number(formData.get("warranty_period"))
@@ -222,8 +219,8 @@ export const DialogAddProduct = ({ open, onClose }: DialogAddProductProps) => {
         return;
       }
 
-      if (price < 0 || (price_purchase !== null && price_purchase < 0)) {
-        toast.warning("Giá bán và giá nhập không được âm");
+      if (price < 0) {
+        toast.warning("Giá bán không được âm");
         setIsCreating(false);
         return;
       }
@@ -247,7 +244,7 @@ export const DialogAddProduct = ({ open, onClose }: DialogAddProductProps) => {
           category_id,
           supplier_id,
           price,
-          price_purchase,
+          price_purchase: null, // Không nhập giá nhập
           description,
           warranty_period,
           items: itemsToSend.map((item) => ({
@@ -408,37 +405,20 @@ export const DialogAddProduct = ({ open, onClose }: DialogAddProductProps) => {
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Giá bán (VND) <span className="text-red-500">*</span>
-              </label>
-              <input
-                type="number"
-                name="price"
-                min="0"
-                step="1000"
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                placeholder="0"
-                required
-                disabled={isCreating}
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Giá nhập (VND)
-              </label>
-              <input
-                type="number"
-                name="price_purchase"
-                min="0"
-                step="1000"
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                placeholder="0 (tùy chọn)"
-                disabled={isCreating}
-              />
-            </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Giá bán (VND) <span className="text-red-500">*</span>
+            </label>
+            <input
+              type="number"
+              name="price"
+              min="0"
+              step="1000"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              placeholder="0"
+              required
+              disabled={isCreating}
+            />
           </div>
 
           <div>

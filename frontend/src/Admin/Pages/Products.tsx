@@ -13,6 +13,7 @@ const Products = () => {
   const [openAddProduct, setOpenAddProduct] = useState(false);
   const [openEditProduct, setOpenEditProduct] = useState(false);
   const [openDeleteConfirm, setOpenDeleteConfirm] = useState(false);
+  const [imageErrors, setImageErrors] = useState<Set<number>>(new Set());
   const [isUpdating, setIsUpdating] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
@@ -283,16 +284,19 @@ const Products = () => {
                   <tr key={product.product_id} className="hover:bg-gray-50">
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center gap-3">
-                        <div className="w-12 h-12 rounded-lg bg-gray-100 overflow-hidden flex items-center justify-center">
-                          {product.thumbnail ? (
+                        <div className="w-12 h-12 rounded-lg bg-gray-100 overflow-hidden flex items-center justify-center flex-shrink-0">
+                          {product.thumbnail && !imageErrors.has(product.product_id) ? (
                             <img
                               src={product.thumbnail}
                               alt={product.product_name}
                               className="w-full h-full object-cover"
                               loading="lazy"
+                              onError={() => {
+                                setImageErrors((prev) => new Set(prev).add(product.product_id));
+                              }}
                             />
                           ) : (
-                            <span className="text-xs text-gray-500">
+                            <span className="text-xs text-gray-500 text-center px-1">
                               No image
                             </span>
                           )}
