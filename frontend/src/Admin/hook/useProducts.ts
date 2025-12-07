@@ -15,7 +15,13 @@ interface Product {
 const API_BASE = import.meta.env.VITE_API_URL;
 
 const fetchProducts = async (): Promise<Product[]> => {
-  const res = await fetch(`${API_BASE}/api/admin/getProducts`);
+  const token = localStorage.getItem("auth_token");
+  const res = await fetch(`${API_BASE}/api/admin/getProducts`, {
+    headers: {
+      "Content-Type": "application/json",
+      ...(token && { Authorization: `Bearer ${token}` }),
+    },
+  });
   if (!res.ok) {
     throw new Error("Lỗi khi tải danh sách sản phẩm");
   }

@@ -1,6 +1,6 @@
 import { useState } from "react";
-import { Search, Edit, Trash2 } from "lucide-react";
-import { DialogEditProduct, DialogDeleteConfirm } from "../Components";
+import { Search, Edit, Trash2, Plus } from "lucide-react";
+import { DialogAddProduct, DialogEditProduct, DialogDeleteConfirm } from "../Components";
 import { useProducts } from "../hook/useProducts";
 import { useProductItems } from "../hook/useProductItems";
 import { useCategories } from "../hook/useCategories";
@@ -10,8 +10,10 @@ import { toast } from "react-toastify";
 const Products = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCategoryId, setSelectedCategoryId] = useState<number | "">("");
+  const [openAddProduct, setOpenAddProduct] = useState(false);
   const [openEditProduct, setOpenEditProduct] = useState(false);
   const [openDeleteConfirm, setOpenDeleteConfirm] = useState(false);
+  const [imageErrors, setImageErrors] = useState<Set<number>>(new Set());
   const [isUpdating, setIsUpdating] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
@@ -81,10 +83,15 @@ const Products = () => {
     setIsDeleting(true);
     try {
       const API_BASE = import.meta.env.VITE_API_URL;
+      const token = localStorage.getItem("auth_token");
       const response = await fetch(
         `${API_BASE}/api/admin/deleteProduct/${selectedProduct.product_id}`,
         {
           method: "DELETE",
+          headers: {
+            "Content-Type": "application/json",
+            ...(token && { Authorization: `Bearer ${token}` }),
+          },
         }
       );
 
@@ -124,12 +131,14 @@ const Products = () => {
     setIsUpdating(true);
     try {
       const API_BASE = import.meta.env.VITE_API_URL;
+      const token = localStorage.getItem("auth_token");
       const response = await fetch(
         `${API_BASE}/api/admin/updateProduct/${selectedProduct.product_id}`,
         {
           method: "PUT",
           headers: {
             "Content-Type": "application/json",
+            ...(token && { Authorization: `Bearer ${token}` }),
           },
           body: JSON.stringify({
             product_name,
@@ -166,6 +175,13 @@ const Products = () => {
             Quản lý danh sách sản phẩm trong cửa hàng
           </p>
         </div>
+        <button
+          onClick={() => setOpenAddProduct(true)}
+          className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
+        >
+          <Plus size={20} />
+          Thêm sản phẩm
+        </button>
       </div>
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
         <div className="flex items-center gap-4">
@@ -268,16 +284,19 @@ const Products = () => {
                   <tr key={product.product_id} className="hover:bg-gray-50">
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center gap-3">
-                        <div className="w-12 h-12 rounded-lg bg-gray-100 overflow-hidden flex items-center justify-center">
-                          {product.thumbnail ? (
+                        <div className="w-12 h-12 rounded-lg bg-gray-100 overflow-hidden flex items-center justify-center flex-shrink-0">
+                          {product.thumbnail && !imageErrors.has(product.product_id) ? (
                             <img
                               src={product.thumbnail}
                               alt={product.product_name}
                               className="w-full h-full object-cover"
                               loading="lazy"
+                              onError={() => {
+                                setImageErrors((prev) => new Set(prev).add(product.product_id));
+                              }}
                             />
                           ) : (
-                            <span className="text-xs text-gray-500">
+                            <span className="text-xs text-gray-500 text-center px-1">
                               No image
                             </span>
                           )}
@@ -420,6 +439,11 @@ const Products = () => {
           </div>
         </div>
       </div>
+      <DialogAddProduct
+        open={openAddProduct}
+        onClose={() => setOpenAddProduct(false)}
+      />
+
       <DialogEditProduct
         open={openEditProduct}
         onClose={() => {

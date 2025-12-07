@@ -15,6 +15,19 @@ const LoginForm = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Validate inputs
+    if (!username.trim() || !password.trim()) {
+      setError("Vui lòng nhập đầy đủ thông tin");
+      toast.error("Vui lòng nhập đầy đủ thông tin");
+      return;
+    }
+
+    // Prevent double submission
+    if (isLoading) {
+      return;
+    }
+
     setError("");
     setIsLoading(true);
 
@@ -30,11 +43,12 @@ const LoginForm = () => {
       } catch (_) {
         navigate("/");
       }
+      // Reset loading after successful navigation
+      setIsLoading(false);
     } catch (err: any) {
       const errorMessage = err.message || "Đăng nhập thất bại";
       setError(errorMessage);
       toast.error(errorMessage);
-    } finally {
       setIsLoading(false);
     }
   };
@@ -113,10 +127,13 @@ const LoginForm = () => {
 
           <button
             type="submit"
-            disabled={isLoading}
-            className={`w-full flex justify-center py-3 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors ${
-              isLoading ? "opacity-50 cursor-not-allowed" : ""
+            disabled={isLoading || !username.trim() || !password.trim()}
+            className={`w-full flex justify-center items-center min-h-[48px] py-3 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors relative z-10 ${
+              isLoading || !username.trim() || !password.trim() 
+                ? "opacity-50 cursor-not-allowed" 
+                : "cursor-pointer"
             }`}
+            style={{ pointerEvents: isLoading ? 'none' : 'auto' }}
           >
             {isLoading ? (
               <div className="flex items-center">

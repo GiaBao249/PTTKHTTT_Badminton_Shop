@@ -13,7 +13,13 @@ interface Order {
 const API_BASE = import.meta.env.VITE_API_URL;
 
 const fetchOrders = async (): Promise<Order[]> => {
-  const res = await fetch(`${API_BASE}/api/admin/getOrders`);
+  const token = localStorage.getItem("auth_token");
+  const res = await fetch(`${API_BASE}/api/admin/getOrders`, {
+    headers: {
+      "Content-Type": "application/json",
+      ...(token && { Authorization: `Bearer ${token}` }),
+    },
+  });
   if (!res.ok) {
     throw new Error("Lỗi khi tải danh sách đơn hàng");
   }
