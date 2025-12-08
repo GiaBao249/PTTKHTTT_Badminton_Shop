@@ -15,9 +15,11 @@ export class StatisticsService {
   ) {}
   private getPeriodKey(date: Date, period: PeriodType): string {
     switch (period) {
-      case "day":
-        return date.toISOString().split("T")[0];
-      case "week":
+      case "day": {
+        const dayKey = date.toISOString().split("T")[0];
+        return dayKey || "";
+      }
+      case "week": {
         const weekDate = new Date(date);
         const dayOfWeek = weekDate.getDay();
         const daysToMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
@@ -31,6 +33,7 @@ export class StatisticsService {
         let weekNumber = Math.floor((daysFromJan1 + jan1Day) / 7);
         if (jan1Day > 1) weekNumber += 1;
         return `${year}-W${String(weekNumber).padStart(2, "0")}`;
+      }
       case "month":
         return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(
           2,

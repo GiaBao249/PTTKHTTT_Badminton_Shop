@@ -1,11 +1,7 @@
 import { injectable, inject } from "tsyringe";
 import { Request, Response } from "express";
 import { CartService } from "../services/CartService";
-import {
-  AddToCartDto,
-  UpdateCartDto,
-  DeleteCartItemDto,
-} from "../models/Cart";
+import { AddToCartDto, UpdateCartDto, DeleteCartItemDto } from "../models/Cart";
 import { AppError } from "../middleware/errorHandler";
 
 @injectable()
@@ -18,7 +14,7 @@ export class CartController {
    */
   getCartItems = async (req: Request, res: Response): Promise<void> => {
     try {
-      const customerId = parseInt(req.params.customerId);
+      const customerId = parseInt(req.params.customerId || "0");
       if (isNaN(customerId)) {
         res.status(400).json({ error: "Invalid customer ID" });
         return;
@@ -137,4 +133,3 @@ export class CartController {
     }
   };
 }
-

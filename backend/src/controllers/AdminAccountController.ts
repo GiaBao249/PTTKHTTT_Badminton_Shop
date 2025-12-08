@@ -28,7 +28,7 @@ export class AdminAccountController {
 
   getAdminAccountById = async (req: Request, res: Response): Promise<void> => {
     try {
-      const accountId = parseInt(req.params.id);
+      const accountId = parseInt(req.params.id || "0");
       if (isNaN(accountId)) {
         res.status(400).json({ error: "Invalid admin account ID" });
         return;

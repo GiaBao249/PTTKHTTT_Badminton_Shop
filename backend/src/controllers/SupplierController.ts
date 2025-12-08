@@ -24,7 +24,7 @@ export class SupplierController {
   };
   getSupplierById = async (req: Request, res: Response): Promise<void> => {
     try {
-      const supplierId = parseInt(req.params.id);
+      const supplierId = parseInt(req.params.id || "0");
       if (isNaN(supplierId)) {
         res.status(400).json({ error: "Invalid supplier Id" });
         return;

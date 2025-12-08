@@ -12,7 +12,7 @@ export class PurchaseOrderRepository {
       .from("purchaseorders")
       .select("purchaseorder_id, supplier_id, employee_id, purchaseorder_date")
       .order("purchaseorder_id", { ascending: false });
-    
+
     if (error) throw error;
     return data ?? [];
   }
@@ -26,7 +26,7 @@ export class PurchaseOrderRepository {
       .select("purchaseorder_id, supplier_id, employee_id, purchaseorder_date")
       .eq("purchaseorder_id", purchaseOrderId)
       .single();
-    
+
     if (error) throw error;
     return data;
   }
@@ -41,7 +41,7 @@ export class PurchaseOrderRepository {
       .from("suppliers")
       .select("supplier_id, supplier_name")
       .in("supplier_id", supplierIds);
-    
+
     if (error) throw error;
 
     const supplierMap = new Map<number, any>();
@@ -61,7 +61,7 @@ export class PurchaseOrderRepository {
       .from("employees")
       .select("employ_id, name")
       .in("employ_id", employeeIds);
-    
+
     if (error) throw error;
 
     const employeeMap = new Map<number, any>();
@@ -82,9 +82,11 @@ export class PurchaseOrderRepository {
   ): Promise<PurchaseOrderDetail[]> {
     const { data, error } = await supabase
       .from("purchaseorderdetail")
-      .select("purchaseorderdetail_id, product_id, price, quantity")
+      .select(
+        "purchaseorderdetail_id, purchaseorder_id, product_id, price, quantity"
+      )
       .eq("purchaseorder_id", purchaseOrderId);
-    
+
     if (error) throw error;
     return data ?? [];
   }
@@ -97,7 +99,8 @@ export class PurchaseOrderRepository {
 
     const { data, error } = await supabase
       .from("product")
-      .select(`
+      .select(
+        `
         product_id,
         product_name,
         category_id,
@@ -109,9 +112,10 @@ export class PurchaseOrderRepository {
             image_filename
           )
         )
-      `)
+      `
+      )
       .in("product_id", productIds);
-    
+
     if (error) throw error;
 
     const productMap = new Map<number, any>();
@@ -119,16 +123,16 @@ export class PurchaseOrderRepository {
       // Lấy thumbnail từ product_item đầu tiên
       const firstItem = p.product_item?.[0];
       const firstImage = firstItem?.product_image?.[0]?.image_filename;
-      
+
       if (firstImage) {
-        const { data: { publicUrl } } = supabase.storage
-          .from("product-images")
-          .getPublicUrl(firstImage);
+        const {
+          data: { publicUrl },
+        } = supabase.storage.from("product-images").getPublicUrl(firstImage);
         p.thumbnail = publicUrl;
       } else {
         p.thumbnail = null;
       }
-      
+
       productMap.set(p.product_id, p);
     });
 
@@ -145,7 +149,7 @@ export class PurchaseOrderRepository {
       .order("purchaseorder_id", { ascending: false })
       .limit(1)
       .single();
-    
+
     if (error) return 0;
     return data?.purchaseorder_id || 0;
   }
@@ -170,7 +174,7 @@ export class PurchaseOrderRepository {
       ])
       .select()
       .single();
-    
+
     if (error) throw error;
     if (!data) {
       throw new Error("Không thể tạo purchase order");
@@ -188,7 +192,7 @@ export class PurchaseOrderRepository {
       .order("purchaseorderdetail_id", { ascending: false })
       .limit(1)
       .single();
-    
+
     if (error) return 0;
     return data?.purchaseorderdetail_id || 0;
   }
@@ -210,7 +214,7 @@ export class PurchaseOrderRepository {
     const { error } = await supabase
       .from("purchaseorderdetail")
       .insert(details);
-    
+
     if (error) throw error;
   }
 
@@ -223,7 +227,7 @@ export class PurchaseOrderRepository {
       .select("*")
       .eq("product_id", productId)
       .single();
-    
+
     if (error) return null;
     return data;
   }
@@ -245,7 +249,7 @@ export class PurchaseOrderRepository {
       .insert([productData])
       .select()
       .single();
-    
+
     if (error) throw error;
     if (!data || !data.product_id) {
       throw new Error("Không thể tạo sản phẩm: Không nhận được product_id");
@@ -264,7 +268,7 @@ export class PurchaseOrderRepository {
       .from("product")
       .update(updateData)
       .eq("product_id", productId);
-    
+
     if (error) throw error;
   }
 
@@ -278,7 +282,7 @@ export class PurchaseOrderRepository {
       .eq("product_id", productId)
       .limit(1)
       .maybeSingle();
-    
+
     if (error) return null;
     return data;
   }
@@ -294,7 +298,7 @@ export class PurchaseOrderRepository {
       .from("product_item")
       .update({ quantity: newQuantity })
       .eq("product_item_id", productItemId);
-    
+
     if (error) throw error;
   }
 
@@ -305,8 +309,7 @@ export class PurchaseOrderRepository {
     const { error } = await supabase
       .from("product_item")
       .insert([{ product_id: productId, quantity }]);
-    
+
     if (error) throw error;
   }
 }
-

@@ -2,13 +2,15 @@ import { Request, Response, Router } from "express";
 import { supabase } from "../../config/supabase";
 
 export function registerSpecificationRoutes(router: Router) {
-  router.get("/:id/specification", async (req: Request, res: Response) => {
-    try {
-      const { id } = req.params;
-      const { data, error } = await supabase
-        .from("product_item")
-        .select(
-          `
+  router.get(
+    "/:id/specification",
+    async (req: Request, res: Response): Promise<void> => {
+      try {
+        const { id } = req.params;
+        const { data, error } = await supabase
+          .from("product_item")
+          .select(
+            `
           product_item_id,
           product_id,
           product_configuration (
@@ -23,34 +25,38 @@ export function registerSpecificationRoutes(router: Router) {
             )
           )
         `
-        )
-        .eq("product_id", id);
-      if (error) throw error;
-      if (!data || data.length === 0) return res.json([]);
+          )
+          .eq("product_id", id);
+        if (error) throw error;
+        if (!data || data.length === 0) {
+          res.json([]);
+          return;
+        }
 
-      const specs: { name: string; value: string }[] = [];
-      const seen = new Set<string>();
+        const specs: { name: string; value: string }[] = [];
+        const seen = new Set<string>();
 
-      data.forEach((item: any) => {
-        const configs = item.product_configuration ?? [];
-        configs.forEach((cfg: any) => {
-          const varOpt = cfg.variation_options;
-          if (!varOpt || !varOpt.variation) return;
+        data.forEach((item: any) => {
+          const configs = item.product_configuration ?? [];
+          configs.forEach((cfg: any) => {
+            const varOpt = cfg.variation_options;
+            if (!varOpt || !varOpt.variation) return;
 
-          const key = `${varOpt.variation.name}:${varOpt.value}`;
-          if (!seen.has(key)) {
-            seen.add(key);
-            specs.push({
-              name: varOpt.variation.name,
-              value: varOpt.value,
-            });
-          }
+            const key = `${varOpt.variation.name}:${varOpt.value}`;
+            if (!seen.has(key)) {
+              seen.add(key);
+              specs.push({
+                name: varOpt.variation.name,
+                value: varOpt.value,
+              });
+            }
+          });
         });
-      });
 
-      res.json(specs);
-    } catch (error: any) {
-      res.status(500).json({ error: error.message });
+        res.json(specs);
+      } catch (error: any) {
+        res.status(500).json({ error: error.message });
+      }
     }
-  });
+  );
 }

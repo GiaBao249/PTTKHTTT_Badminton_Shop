@@ -90,7 +90,7 @@ export class PermissionController {
    */
   updateRole = async (req: Request, res: Response): Promise<void> => {
     try {
-      const roleId = parseInt(req.params.id);
+      const roleId = parseInt(req.params.id || "0");
       if (isNaN(roleId)) {
         res.status(400).json({ error: "Invalid role ID" });
         return;
@@ -117,7 +117,7 @@ export class PermissionController {
    */
   deleteRole = async (req: Request, res: Response): Promise<void> => {
     try {
-      const roleId = parseInt(req.params.id);
+      const roleId = parseInt(req.params.id || "0");
       if (isNaN(roleId)) {
         res.status(400).json({ error: "Invalid role ID" });
         return;
@@ -186,7 +186,7 @@ export class PermissionController {
    */
   updatePermission = async (req: Request, res: Response): Promise<void> => {
     try {
-      const permissionId = parseInt(req.params.id);
+      const permissionId = parseInt(req.params.id || "0");
       if (isNaN(permissionId)) {
         res.status(400).json({ error: "Invalid permission ID" });
         return;
@@ -213,7 +213,7 @@ export class PermissionController {
    */
   deletePermission = async (req: Request, res: Response): Promise<void> => {
     try {
-      const permissionId = parseInt(req.params.id);
+      const permissionId = parseInt(req.params.id || "0");
       if (isNaN(permissionId)) {
         res.status(400).json({ error: "Invalid permission ID" });
         return;
@@ -239,7 +239,7 @@ export class PermissionController {
    */
   getAdminRoles = async (req: Request, res: Response): Promise<void> => {
     try {
-      const adminId = parseInt(req.params.adminId);
+      const adminId = parseInt(req.params.adminId || "0");
       if (isNaN(adminId)) {
         res.status(400).json({ error: "Invalid admin ID" });
         return;
@@ -265,7 +265,7 @@ export class PermissionController {
    */
   assignRolesToAdmin = async (req: Request, res: Response): Promise<void> => {
     try {
-      const adminId = parseInt(req.params.adminId);
+      const adminId = parseInt(req.params.adminId || "0");
       if (isNaN(adminId)) {
         res.status(400).json({ error: "Invalid admin ID" });
         return;

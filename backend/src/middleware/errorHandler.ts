@@ -14,12 +14,13 @@ export const errorHandler = (
   req: Request,
   res: Response,
   next: NextFunction
-) => {
+): void => {
   if (err instanceof AppError) {
-    return res.status(err.statusCode).json({
+    res.status(err.statusCode).json({
       error: err.message,
       code: err.code,
     });
+    return;
   }
   console.log("Unexpected error", err);
   res.status(500).json({

@@ -27,7 +27,7 @@ export class EmployeeController {
 
   getEmployeeById = async (req: Request, res: Response): Promise<void> => {
     try {
-      const employeeId = parseInt(req.params.id);
+      const employeeId = parseInt(req.params.id || "0");
       if (isNaN(employeeId)) {
         res.status(400).json({ error: "Invalid employee ID" });
         return;
