@@ -14,7 +14,7 @@ const HeaderProduct = ({ namePage, countProducts }: HeaderProductProps) => {
     <div>
       <h2 className="font-bold text-2xl">{nameProducts}</h2>
       <p className="text-sm text-gray-500 mt-2">
-        {countProductsState} products found
+        {countProductsState} sản phẩm tìm thấy
       </p>
     </div>
   );

@@ -3,8 +3,11 @@
   "ts-node": {
     "transpileOnly": true,
     "files": true,
+    "require": ["reflect-metadata"],
     "compilerOptions": {
-      "module": "commonjs"
+      "module": "commonjs",
+      "experimentalDecorators": true,
+      "emitDecoratorMetadata": true
     }
   }
 }

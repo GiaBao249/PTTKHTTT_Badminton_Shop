@@ -13,23 +13,23 @@ import img4 from "../assets/c4.jpg";
 const slides = [
   {
     image: img4,
-    title: "Unleash Your Power",
-    subtitle: "Premium rackets engineered for champions",
-    cta: "Shop Now",
+    title: "Bùng nổ sức mạnh",
+    subtitle: "Vợt cao cấp cho nhà vô địch",
+    cta: "Mua ngay",
     align: "center",
   },
   {
     image: img1,
-    title: "Elevate Your Game",
-    subtitle: "Professional-grade equipment for serious players",
-    cta: "Explore Collection",
+    title: "Nâng tầm trận đấu",
+    subtitle: "Thiết bị chuyên nghiệp cho người chơi nghiêm túc",
+    cta: "Khám phá bộ sưu tập",
     align: "center",
   },
   {
     image: img2,
-    title: "Victory Starts Here",
-    subtitle: "Get up to 30% off on selected rackets",
-    cta: "Shop Deals",
+    title: "Chiến thắng bắt đầu từ đây",
+    subtitle: "Giảm đến 30% cho một số mẫu vợt",
+    cta: "Săn ưu đãi",
     align: "center",
   },
 ];

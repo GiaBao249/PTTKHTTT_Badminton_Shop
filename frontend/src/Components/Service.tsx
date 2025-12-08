@@ -3,35 +3,34 @@ const Service = () => {
   const serviceData = [
     {
       icon: "Shield",
-      title: "100% Authentic",
+      title: "100% Chính hãng",
       description:
-        "All products are genuine and sourced directly from authorized distributors.",
+        "Tất cả sản phẩm đều chính hãng, nhập trực tiếp từ nhà phân phối uỷ quyền.",
     },
     {
       icon: "Truck",
-      title: "Free Delivery",
+      title: "Miễn phí giao hàng",
       description:
-        "Enjoy free delivery on all orders over $50 within the continental US.",
+        "Miễn phí giao hàng cho đơn từ 350.000đ (áp dụng khu vực nội thành).",
     },
     {
       icon: "Award",
-      title: "Warranty Included",
-      description:
-        "Comprehensive warranty coverage on all rackets and equipment",
+      title: "Bảo hành đầy đủ",
+      description: "Chính sách bảo hành rõ ràng cho vợt và thiết bị đi kèm.",
     },
     {
       icon: "Headphones",
-      title: "24/7 Customer Support",
+      title: "Hỗ trợ 24/7",
       description:
-        "Our support team is available 24/7 to assist you with any inquiries.",
+        "Đội ngũ hỗ trợ luôn sẵn sàng 24/7 để giải đáp mọi thắc mắc của bạn.",
     },
   ];
   return (
     <section className="py-12 md:py-16 border border-y-gray-200">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-        <h2 className="text-4xl font-bold text-center">Why Choose N&B?</h2>
+        <h2 className="text-4xl font-bold text-center">Vì sao chọn N&B?</h2>
         <p className="text-xl text-center text-gray-600 mt-4">
-          Your trusted badminton equipment partner
+          Đối tác đáng tin cậy về thiết bị cầu lông của bạn
         </p>
       </div>
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6 md:gap-8 mt-10 mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 pt-8">

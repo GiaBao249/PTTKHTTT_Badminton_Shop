@@ -1,105 +1,106 @@
-import { ShoppingCart, Star } from "lucide-react";
 import ProductCard from "./ProductCard";
-import img1 from "../assets/c1.jpg";
+import { Link, useNavigate } from "react-router-dom";
+import type { ProductListItem } from "../types/ProductTypes/ProductType";
+import { useState } from "react";
+import { useEffect } from "react";
+import { toUIProduct } from "../utils/productMapper";
+import { useAuth } from "../contexts/AuthContext";
+import { cartService } from "../services/cartService";
+import { toast } from "react-toastify";
+const API_BASE = import.meta.env.VITE_API_URL;
 const FeaturedProducts = () => {
-  const products = [
-    {
-      title: "Astrox 99 Pro",
-      image: img1,
-      price: 249.99,
-      rating: 4.8,
-      reviews: 120,
-      inStockCount: 15,
-      description: "Lightweight racket for power and control.",
-      information: "Shaft Flex: Stiff, Weight: 88g, Balance: Head Heavy",
-      Category: "Rackets",
-      company: "Yonex",
-      color: "Sold 1200",
-      type: {
-        isSale: true,
-        isBestSeller: true,
-        isNew: false,
-        salePercent: "15%",
-      },
-    },
-    {
-      title: "Jetspeed S 12",
-      image: img1,
-      price: 229.99,
-      rating: 4.7,
-      reviews: 95,
-      inStockCount: 10,
-      description: "Aerodynamic design for quick swings.",
-      information: "Shaft Flex: Medium, Weight: 87g, Balance: Even",
-      company: "Victor",
-      Category: "Rackets",
-      color: "Sold 899",
-      type: {
-        isSale: false,
-        isBestSeller: true,
-        isNew: false,
-        salePercent: "15%",
-      },
-    },
-    {
-      title: "Turbo X 90",
-      image: img1,
-      price: 239.99,
-      rating: 4.6,
-      reviews: 80,
-      inStockCount: 12,
-      description: "Speed and agility for the quick player.",
-      information: "Shaft Flex: Stiff, Weight: 89g, Balance: Head Heavy",
-      Category: "Rackets",
-      company: "Li-Ning",
-      color: "Sold 654",
-      type: {
-        isSale: false,
-        isBestSeller: false,
-        isNew: true,
-        salePercent: "15%",
-      },
-    },
-    {
-      title: "SHB 65X VA - Grayish Beige",
-      image: img1,
-      price: 119.99,
-      rating: 4.5,
-      reviews: 60,
-      inStockCount: 0,
-      description: "Comfortable and durable badminton shoes.",
-      information: "Size: 6-12, Weight: 350g, Material: Synthetic",
-      Category: "Shoes",
-      company: "Yonex",
-      color: "Sold 430",
-      type: {
-        isSale: true,
-        isBestSeller: false,
-        isNew: false,
-        salePercent: "15%",
-      },
-    },
-  ];
+  const [featuredProducts, setFeaturedProducts] = useState<ProductListItem[]>(
+    []
+  );
+  const navigate = useNavigate();
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const { token } = useAuth();
+  useEffect(() => {
+    const fetchProducts = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        const res = await fetch(`${API_BASE}/api/products/featured-products`);
+        if (!res.ok) {
+          throw new Error(`HTTP ${res.status}`);
+        }
+        const data: ProductListItem[] = await res.json();
+        setFeaturedProducts(data);
+      } catch (e: any) {
+        setError(e.message || "Lỗi khi tải sản phẩm");
+        console.error("Lỗi khi tải sản phẩm:", e);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchProducts();
+  }, []);
+
   return (
     <section className="py-12 md:py-16">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="flex flex-row justify-between">
           <div>
             <h2 className="font-bold text-4xl text-gray-900">
-              Featured Products
+              Sản phẩm nổi bật
             </h2>
             <p className="font-light text-lg md:text-xl text-gray-600 pt-3">
-              Top picks for serious players
+              Lựa chọn hàng đầu cho người chơi nghiêm túc
             </p>
           </div>
-          <button className=" mt-5 shadow-sm rounded-lg h-10 border border-black/20 px-4 hover:shadow-md hover:scale-105 transition-all duration-300">
-            View All
-          </button>
+          <Link to="/products-page">
+            <button className="mt-5 shadow-sm rounded-lg h-10 border border-black/20 px-4 hover:shadow-md hover:scale-105 transition-all duration-300">
+              Xem tất cả
+            </button>
+          </Link>
         </div>
         <div className="grid sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-5 xl:gap-7 mt-8 rounded-lg">
-          {products.map((product, index) => (
-            <ProductCard product={product} variant="default" key={index} />
-          ))}
+          {featuredProducts.map((product: ProductListItem) => {
+            return (
+              <Link
+                to={`/products-page/product/${product.product_id}`}
+                state={toUIProduct(product)}
+                key={product.product_id}
+              >
+                <ProductCard
+                  product={toUIProduct(product)}
+                  variant="default"
+                  onAddToCart={async () => {
+                    if (!token) {
+                      toast.warning("Vui lòng đăng nhập trước khi mua hàng");
+                      navigate("/login");
+                      return;
+                    }
+
+                    try {
+                      const res = await fetch(
+                        `${API_BASE}/api/products/${product.product_id}`
+                      );
+                      if (!res.ok) {
+                        throw new Error("Không thể lấy thông tin sản phẩm");
+                      }
+                      const data = await res.json();
+                      if (!data.items || data.items.length === 0) {
+                        toast.warning("Sản phẩm không có phiên bản nào");
+                        return;
+                      }
+                      const product_item_id = data.items[0].product_item_id;
+                      await cartService.addItem(product_item_id, 1, token);
+                      toast.success("Đã thêm vào giỏ hàng");
+                      window.dispatchEvent(new CustomEvent("cart:reload"));
+                    } catch (error) {
+                      toast.warning(
+                        error instanceof Error
+                          ? error.message
+                          : "Lỗi khi thêm vào giỏ hàng"
+                      );
+                    }
+                  }}
+                />
+              </Link>
+            );
+          })}
         </div>
       </div>
     </section>

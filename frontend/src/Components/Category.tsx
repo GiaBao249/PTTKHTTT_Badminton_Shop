@@ -1,39 +1,45 @@
-import img1 from "../assets/c1.jpg";
+import img1 from "../assets/c5.jpg";
+import img2 from "../assets/c6.jpg";
+import img3 from "../assets/c7.png";
+import img4 from "../assets/c9.jpg";
+import img5 from "../assets/c10.png";
 const Category = () => {
   const categories = [
     {
-      title: "Rackets",
-      img: img1,
-      subtitle: "Professional quality rackets",
+      title: "Vợt cầu lông",
+      img: img4,
+      subtitle: "Vợt chất lượng cao, chuyên nghiệp",
     },
     {
-      title: "Shoes",
-      img: img1,
-      subtitle: "Court shoes for optimal performance",
+      title: "Giày cầu lông",
+      img: img5,
+      subtitle: "Thoải mái, êm ái, linh hoạt, bao vệ đôi chân",
     },
     {
-      title: "Shuttlecocks",
+      title: "Quả cầu",
       img: img1,
-      subtitle: "Durable and high-flying shuttlecocks",
+      subtitle: "Nhẹ, bền, chất lượng cao",
     },
     {
-      title: "Strings",
-      img: img1,
-      subtitle: "High-performance strings for all play styles",
+      title: "Áo cầu lông",
+      img: img2,
+      subtitle: "Thoải mái, dễ chịu, thoáng mát",
     },
     {
-      title: "Accessories",
-      img: img1,
-      subtitle: "Bags, grips, and more",
+      title: "Phụ kiện cầu lông",
+      img: img3,
+      subtitle: "Túi xách, bình nước, các vật dụng đi kèm ...",
     },
   ];
   return (
     <section className="py-12 md:py-16">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="flex flex-col items-center gap-2 mb-8 md:mb-10">
-          <h2 className="font-bold text-4xl text-gray-900">Shop by Category</h2>
+          <h2 className="font-bold text-4xl text-gray-900">
+            Danh mục sản phẩm
+          </h2>
           <p className="font-normal text-lg md:text-xl text-gray-600 mt-4">
-            Find the perfect equipment for your game
+            Tìm kiếm sản phẩm phù hợp với bạn
           </p>
         </div>
 
