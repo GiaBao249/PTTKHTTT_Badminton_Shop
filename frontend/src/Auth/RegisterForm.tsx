@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
-import { Lock, User, LogIn, Phone, UserCircle } from "lucide-react";
+import { Lock, User, Phone, UserCircle } from "lucide-react";
 import { toast } from "react-toastify";
 
 const RegisterForm = () => {

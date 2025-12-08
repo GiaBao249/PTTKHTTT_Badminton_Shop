@@ -5,7 +5,7 @@ import { useSuppliers } from "../hook/useSuppliers";
 import { useVariations } from "../hook/useVariations";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "react-toastify";
-import { Plus, X, Upload, Image as ImageIcon } from "lucide-react";
+import { Plus, X, Upload } from "lucide-react";
 
 interface DialogAddProductProps {
   open: boolean;
@@ -20,13 +20,18 @@ interface ProductItem {
 
 export const DialogAddProduct = ({ open, onClose }: DialogAddProductProps) => {
   const [isCreating, setIsCreating] = useState(false);
-  const [selectedCategoryId, setSelectedCategoryId] = useState<number | null>(null);
-  const [selectedVariations, setSelectedVariations] = useState<Record<number, number[]>>({});
+  const [selectedCategoryId, setSelectedCategoryId] = useState<number | null>(
+    null
+  );
+  const [selectedVariations, setSelectedVariations] = useState<
+    Record<number, number[]>
+  >({});
   const [productItems, setProductItems] = useState<ProductItem[]>([]);
   const formRef = useRef<HTMLFormElement>(null);
   const { data: categoriesData } = useCategories();
   const { data: suppliersData } = useSuppliers();
-  const { data: variationsData, isLoading: variationsLoading } = useVariations(selectedCategoryId);
+  const { data: variationsData, isLoading: variationsLoading } =
+    useVariations(selectedCategoryId);
   const queryClient = useQueryClient();
 
   const categories = categoriesData || [];
@@ -45,7 +50,9 @@ export const DialogAddProduct = ({ open, onClose }: DialogAddProductProps) => {
 
     // Nếu không có variations, tạo một item rỗng
     if (variations.length === 0) {
-      const hasEmptyItem = productItems.length === 1 && productItems[0].variation_option_ids.length === 0;
+      const hasEmptyItem =
+        productItems.length === 1 &&
+        productItems[0].variation_option_ids.length === 0;
       if (!hasEmptyItem) {
         setProductItems([{ variation_option_ids: [] }]);
       }
@@ -62,7 +69,9 @@ export const DialogAddProduct = ({ open, onClose }: DialogAddProductProps) => {
 
     // If no variations selected, create one empty item
     if (selectedOptions.length === 0) {
-      const hasEmptyItem = productItems.length === 1 && productItems[0].variation_option_ids.length === 0;
+      const hasEmptyItem =
+        productItems.length === 1 &&
+        productItems[0].variation_option_ids.length === 0;
       if (!hasEmptyItem) {
         setProductItems([{ variation_option_ids: [] }]);
       }
@@ -93,15 +102,27 @@ export const DialogAddProduct = ({ open, onClose }: DialogAddProductProps) => {
       const newStr = JSON.stringify(newItems);
       return prevStr === newStr ? prev : newItems;
     });
-  }, [selectedVariations, variationsData, selectedCategoryId, variationsLoading]);
+  }, [
+    selectedVariations,
+    variationsData,
+    selectedCategoryId,
+    variationsLoading,
+  ]);
 
-  const handleVariationOptionChange = (variationId: number, optionId: number, checked: boolean) => {
+  const handleVariationOptionChange = (
+    variationId: number,
+    optionId: number,
+    checked: boolean
+  ) => {
     setSelectedVariations((prev) => {
       const current = prev[variationId] || [];
       if (checked) {
         return { ...prev, [variationId]: [...current, optionId] };
       } else {
-        return { ...prev, [variationId]: current.filter((id) => id !== optionId) };
+        return {
+          ...prev,
+          [variationId]: current.filter((id) => id !== optionId),
+        };
       }
     });
   };
@@ -124,7 +145,7 @@ export const DialogAddProduct = ({ open, onClose }: DialogAddProductProps) => {
       const updated = [...prev];
       const currentImages = updated[itemIndex].images || [];
       const currentPreviews = updated[itemIndex].imagePreviews || [];
-      
+
       updated[itemIndex] = {
         ...updated[itemIndex],
         images: [...currentImages, ...newFiles],
@@ -139,12 +160,12 @@ export const DialogAddProduct = ({ open, onClose }: DialogAddProductProps) => {
       const updated = [...prev];
       const currentImages = updated[itemIndex].images || [];
       const currentPreviews = updated[itemIndex].imagePreviews || [];
-      
+
       // Revoke object URL to free memory
       if (currentPreviews[imageIndex]) {
         URL.revokeObjectURL(currentPreviews[imageIndex]);
       }
-      
+
       updated[itemIndex] = {
         ...updated[itemIndex],
         images: currentImages.filter((_, i) => i !== imageIndex),
@@ -154,11 +175,14 @@ export const DialogAddProduct = ({ open, onClose }: DialogAddProductProps) => {
     });
   };
 
-  const uploadImage = async (productItemId: number, imageFile: File): Promise<boolean> => {
+  const uploadImage = async (
+    productItemId: number,
+    imageFile: File
+  ): Promise<boolean> => {
     try {
       const API_BASE = import.meta.env.VITE_API_URL;
       const token = localStorage.getItem("auth_token");
-      
+
       const formData = new FormData();
       formData.append("image", imageFile);
       formData.append("product_item_id", productItemId.toString());
@@ -185,7 +209,9 @@ export const DialogAddProduct = ({ open, onClose }: DialogAddProductProps) => {
 
   const getVariationOptionLabel = (optionId: number): string => {
     for (const variation of variations) {
-      const option = variation.variation_options.find((opt) => opt.variation_option_id === optionId);
+      const option = variation.variation_options.find(
+        (opt) => opt.variation_option_id === optionId
+      );
       if (option) {
         return `${variation.name}: ${option.value}`;
       }
@@ -214,7 +240,9 @@ export const DialogAddProduct = ({ open, onClose }: DialogAddProductProps) => {
 
       // Validation
       if (!product_name || !category_id) {
-        toast.warning("Vui lòng điền đầy đủ thông tin bắt buộc (tên sản phẩm và danh mục)");
+        toast.warning(
+          "Vui lòng điền đầy đủ thông tin bắt buộc (tên sản phẩm và danh mục)"
+        );
         setIsCreating(false);
         return;
       }
@@ -265,7 +293,7 @@ export const DialogAddProduct = ({ open, onClose }: DialogAddProductProps) => {
         const uploadPromises: Promise<void>[] = [];
         let uploadCount = 0;
         let errorCount = 0;
-        
+
         result.product_items.forEach((createdItem: any, index: number) => {
           const item = itemsToSend[index];
           if (item.images && item.images.length > 0) {
@@ -274,13 +302,22 @@ export const DialogAddProduct = ({ open, onClose }: DialogAddProductProps) => {
               uploadPromises.push(
                 uploadImage(createdItem.product_item_id, imageFile)
                   .then(() => {
-                    console.log(`Successfully uploaded image for item ${index + 1}`);
+                    console.log(
+                      `Successfully uploaded image for item ${index + 1}`
+                    );
                   })
                   .catch((error) => {
                     errorCount++;
-                    console.error(`Error uploading image for item ${index + 1}:`, error);
+                    console.error(
+                      `Error uploading image for item ${index + 1}:`,
+                      error
+                    );
                     const errorMessage = error.message || "Lỗi không xác định";
-                    toast.error(`Lỗi khi upload ảnh cho biến thể #${index + 1}: ${errorMessage}`);
+                    toast.error(
+                      `Lỗi khi upload ảnh cho biến thể #${
+                        index + 1
+                      }: ${errorMessage}`
+                    );
                   })
               );
             });
@@ -293,7 +330,11 @@ export const DialogAddProduct = ({ open, onClose }: DialogAddProductProps) => {
           if (errorCount === 0) {
             toast.success(`Đã upload thành công ${uploadCount} ảnh!`);
           } else if (errorCount < uploadCount) {
-            toast.warning(`Đã upload ${uploadCount - errorCount}/${uploadCount} ảnh thành công`);
+            toast.warning(
+              `Đã upload ${
+                uploadCount - errorCount
+              }/${uploadCount} ảnh thành công`
+            );
           }
         }
       }
@@ -342,11 +383,18 @@ export const DialogAddProduct = ({ open, onClose }: DialogAddProductProps) => {
   };
 
   return (
-    <Dialog open={open} onClose={onClose} title="Thêm sản phẩm mới" maxWidth="xl">
+    <Dialog
+      open={open}
+      onClose={onClose}
+      title="Thêm sản phẩm mới"
+      maxWidth="xl"
+    >
       <form ref={formRef} onSubmit={handleSubmit} className="space-y-6">
         {/* Thông tin cơ bản */}
         <div className="space-y-4">
-          <h3 className="text-lg font-semibold text-gray-900 border-b pb-2">Thông tin cơ bản</h3>
+          <h3 className="text-lg font-semibold text-gray-900 border-b pb-2">
+            Thông tin cơ bản
+          </h3>
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -373,13 +421,18 @@ export const DialogAddProduct = ({ open, onClose }: DialogAddProductProps) => {
                 required
                 disabled={isCreating}
                 onChange={(e) => {
-                  const categoryId = e.target.value ? Number(e.target.value) : null;
+                  const categoryId = e.target.value
+                    ? Number(e.target.value)
+                    : null;
                   handleCategoryChange(categoryId);
                 }}
               >
                 <option value="">Chọn danh mục</option>
                 {categories.map((category) => (
-                  <option key={category.category_id} value={category.category_id}>
+                  <option
+                    key={category.category_id}
+                    value={category.category_id}
+                  >
                     {category.category_name}
                   </option>
                 ))}
@@ -397,7 +450,10 @@ export const DialogAddProduct = ({ open, onClose }: DialogAddProductProps) => {
               >
                 <option value="">Chọn nhà cung cấp (tùy chọn)</option>
                 {suppliers.map((supplier) => (
-                  <option key={supplier.supplier_id} value={supplier.supplier_id}>
+                  <option
+                    key={supplier.supplier_id}
+                    value={supplier.supplier_id}
+                  >
                     {supplier.supplier_name}
                   </option>
                 ))}
@@ -453,13 +509,18 @@ export const DialogAddProduct = ({ open, onClose }: DialogAddProductProps) => {
         {/* Phần variations và product items - chỉ hiển thị khi đã chọn category */}
         {selectedCategoryId && (
           <div className="space-y-4">
-            <h3 className="text-lg font-semibold text-gray-900 border-b pb-2">Biến thể sản phẩm</h3>
+            <h3 className="text-lg font-semibold text-gray-900 border-b pb-2">
+              Biến thể sản phẩm
+            </h3>
 
             {/* Chọn variations */}
             {variations.length > 0 ? (
               <div className="space-y-4">
                 {variations.map((variation) => (
-                  <div key={variation.variation_id} className="p-4 bg-gray-50 rounded-lg">
+                  <div
+                    key={variation.variation_id}
+                    className="p-4 bg-gray-50 rounded-lg"
+                  >
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                       {variation.name}
                     </label>
@@ -471,11 +532,9 @@ export const DialogAddProduct = ({ open, onClose }: DialogAddProductProps) => {
                         >
                           <input
                             type="checkbox"
-                            checked={
-                              (selectedVariations[variation.variation_id] || []).includes(
-                                option.variation_option_id
-                              )
-                            }
+                            checked={(
+                              selectedVariations[variation.variation_id] || []
+                            ).includes(option.variation_option_id)}
                             onChange={(e) =>
                               handleVariationOptionChange(
                                 variation.variation_id,
@@ -486,7 +545,9 @@ export const DialogAddProduct = ({ open, onClose }: DialogAddProductProps) => {
                             className="w-4 h-4 text-indigo-600 focus:ring-indigo-500"
                             disabled={isCreating}
                           />
-                          <span className="text-sm text-gray-700">{option.value}</span>
+                          <span className="text-sm text-gray-700">
+                            {option.value}
+                          </span>
                         </label>
                       ))}
                     </div>
@@ -495,7 +556,9 @@ export const DialogAddProduct = ({ open, onClose }: DialogAddProductProps) => {
               </div>
             ) : (
               <p className="text-sm text-gray-500">
-                {variationsData === undefined ? "Đang tải các biến thể..." : "Danh mục này chưa có biến thể"}
+                {variationsData === undefined
+                  ? "Đang tải các biến thể..."
+                  : "Danh mục này chưa có biến thể"}
               </p>
             )}
 
@@ -505,7 +568,9 @@ export const DialogAddProduct = ({ open, onClose }: DialogAddProductProps) => {
                 <div className="flex items-center justify-between">
                   <h4 className="text-md font-medium text-gray-900">
                     Các biến thể sản phẩm
-                    {productItems.some((item) => item.variation_option_ids.length === 0) && (
+                    {productItems.some(
+                      (item) => item.variation_option_ids.length === 0
+                    ) && (
                       <span className="ml-2 text-xs font-normal text-gray-500">
                         (Có thể tạo sản phẩm không có biến thể)
                       </span>
@@ -577,7 +642,9 @@ export const DialogAddProduct = ({ open, onClose }: DialogAddProductProps) => {
                             accept="image/*"
                             multiple
                             className="hidden"
-                            onChange={(e) => handleImageChange(index, e.target.files)}
+                            onChange={(e) =>
+                              handleImageChange(index, e.target.files)
+                            }
                             disabled={isCreating}
                           />
                         </label>
@@ -587,7 +654,7 @@ export const DialogAddProduct = ({ open, onClose }: DialogAddProductProps) => {
                           </span>
                         )}
                       </div>
-                      
+
                       {/* Image Previews */}
                       {item.imagePreviews && item.imagePreviews.length > 0 && (
                         <div className="grid grid-cols-4 gap-2 mt-2">
@@ -600,7 +667,9 @@ export const DialogAddProduct = ({ open, onClose }: DialogAddProductProps) => {
                               />
                               <button
                                 type="button"
-                                onClick={() => handleRemoveImage(index, imgIndex)}
+                                onClick={() =>
+                                  handleRemoveImage(index, imgIndex)
+                                }
                                 className="absolute top-1 right-1 p-1 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
                                 disabled={isCreating}
                               >

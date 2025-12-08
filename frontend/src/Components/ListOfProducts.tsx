@@ -44,22 +44,16 @@ const ListOfProducts = ({
   ];
 
   const [searchParams] = useSearchParams();
-  const category = searchParams.get("category") || "all";
   const searchQuery = searchParams.get("search");
 
   const handleView = (isGridView: boolean) => {
     setIsGridView(isGridView);
   };
   const { token } = useAuth();
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [products, setProducts] = useState<ProductListItem[]>([]);
   useEffect(() => {
     const loadData = async () => {
       try {
-        setLoading(true);
-        setError(null);
-
         // If search query exists, use search API
         if (searchQuery && searchQuery.trim().length > 0) {
           const keyword = encodeURIComponent(searchQuery.trim());
@@ -97,9 +91,7 @@ const ListOfProducts = ({
         }
         setCurrentPage(1);
       } catch (e: any) {
-        setError(e.message || "Fetch failed");
-      } finally {
-        setLoading(false);
+        console.error("Error loading products:", e);
       }
     };
     loadData();

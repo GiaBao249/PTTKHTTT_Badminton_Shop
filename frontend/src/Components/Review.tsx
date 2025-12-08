@@ -2,7 +2,7 @@ import { Reply, Star, Send, X, Loader2, User2 } from "lucide-react";
 import type { Products } from "../types/ProductTypes/ProductType";
 import { useState } from "react";
 
-const Review = ({ product }: { product: Products }) => {
+const Review = ({ product: _product }: { product: Products }) => {
   const [isAdmin] = useState(true);
   const [showReply, setShowReply] = useState(false);
   const [reply, setReply] = useState("");
