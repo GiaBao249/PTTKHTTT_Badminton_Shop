@@ -34,6 +34,42 @@ const Dashboard = () => {
       currency: "VND",
     }).format(v);
 
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case "Delivered":
+      case "Đã giao":
+        return "bg-green-100 text-green-700";
+      case "Shipped":
+      case "Đang giao":
+        return "bg-blue-100 text-blue-700";
+      case "Pending":
+      case "Processing":
+      case "Chờ xử lý":
+        return "bg-yellow-100 text-yellow-700";
+      case "Cancelled":
+      case "Đã hủy":
+        return "bg-red-100 text-red-700";
+      default:
+        return "bg-gray-100 text-gray-700";
+    }
+  };
+
+  const getStatusVietnamese = (status: string) => {
+    switch (status) {
+      case "Delivered":
+        return "Đã giao";
+      case "Shipped":
+        return "Đang giao";
+      case "Pending":
+      case "Processing":
+        return "Chờ xử lý";
+      case "Cancelled":
+        return "Đã hủy";
+      default:
+        return status;
+    }
+  };
+
   const statCards = [
     {
       title: "Tổng đơn hàng",
@@ -132,8 +168,12 @@ const Dashboard = () => {
                   <p className="font-semibold text-gray-900">
                     {formatVND(i.total_amount)}
                   </p>
-                  <span className="inline-block px-2 py-1 text-xs bg-green-100 text-green-700 rounded-full">
-                    {i.status}
+                  <span
+                    className={`inline-block px-2 py-1 text-xs rounded-full ${getStatusColor(
+                      i.status
+                    )}`}
+                  >
+                    {getStatusVietnamese(i.status)}
                   </span>
                 </div>
               </div>

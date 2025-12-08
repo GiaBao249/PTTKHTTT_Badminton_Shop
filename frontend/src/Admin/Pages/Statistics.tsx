@@ -1,14 +1,26 @@
 import { useState } from "react";
 import {
-  TrendingUp,
-  TrendingDown,
   DollarSign,
   ShoppingBag,
   Package,
   Users,
-  BarChart3,
   Calendar,
 } from "lucide-react";
+import {
+  BarChart,
+  Bar,
+  LineChart,
+  Line,
+  PieChart,
+  Pie,
+  Cell,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+  ResponsiveContainer,
+} from "recharts";
 import {
   useRevenueStatistics,
   useProductStatistics,
@@ -17,23 +29,29 @@ import {
 } from "../hook/useStatistics";
 
 const Statistics = () => {
-  const [revenuePeriod, setRevenuePeriod] = useState<"day" | "week" | "month" | "year">("month");
+  const [revenuePeriod, setRevenuePeriod] = useState<
+    "day" | "week" | "month" | "year"
+  >("month");
   const [dateRange, setDateRange] = useState<{ start: string; end: string }>({
-    start: new Date(new Date().setMonth(new Date().getMonth() - 1)).toISOString().split("T")[0],
+    start: new Date(new Date().setMonth(new Date().getMonth() - 1))
+      .toISOString()
+      .split("T")[0],
     end: new Date().toISOString().split("T")[0],
   });
   const [showTopOnly, setShowTopOnly] = useState(false);
   const [topCount, setTopCount] = useState(20);
   const [tablePage, setTablePage] = useState(1);
   const [tablePageSize, setTablePageSize] = useState(10);
+  const [chartType, setChartType] = useState<"bar" | "line">("bar");
+  const [hoveredPieIndex, setHoveredPieIndex] = useState<number | null>(null);
 
-  const { data: revenueStats, isLoading: revenueLoading } = useRevenueStatistics(revenuePeriod);
-  const { data: productStats, isLoading: productLoading } = useProductStatistics();
+  const { data: revenueStats, isLoading: revenueLoading } =
+    useRevenueStatistics(revenuePeriod);
+  const { data: productStats, isLoading: productLoading } =
+    useProductStatistics();
   const { data: orderStats, isLoading: orderLoading } = useOrderStatistics();
-  const { data: summaryStats, isLoading: summaryLoading } = useSummaryStatistics(
-    dateRange.start,
-    dateRange.end
-  );
+  const { data: summaryStats, isLoading: summaryLoading } =
+    useSummaryStatistics(dateRange.start, dateRange.end);
 
   const formatVND = (v: number) =>
     new Intl.NumberFormat("vi-VN", {
@@ -52,14 +70,81 @@ const Statistics = () => {
         }))
     : [];
 
+  // Convert status to Vietnamese
+  const getStatusVietnamese = (status: string) => {
+    switch (status) {
+      case "Delivered":
+        return "Đã giao";
+      case "Shipped":
+        return "Đang giao";
+      case "Pending":
+      case "Processing":
+        return "Chờ xử lý";
+      case "Cancelled":
+        return "Đã hủy";
+      default:
+        return status;
+    }
+  };
+
   // Prepare order status chart data
   const orderStatusData = orderStats
     ? Object.entries(orderStats.statusCount).map(([status, count]) => ({
-        status,
+        status: getStatusVietnamese(status),
+        originalStatus: status,
         count,
         revenue: orderStats.statusRevenue[status] || 0,
       }))
     : [];
+
+  // Prepare data for recharts
+  const getDisplayData = () => {
+    let displayData = revenueChartData;
+
+    if (showTopOnly && revenuePeriod === "day") {
+      displayData = [...revenueChartData]
+        .filter((d) => d.revenue > 0)
+        .sort((a, b) => b.revenue - a.revenue)
+        .slice(0, topCount)
+        .sort((a, b) => a.period.localeCompare(b.period));
+    } else if (revenuePeriod === "day" && revenueChartData.length > 30) {
+      displayData = revenueChartData.filter((d) => d.revenue > 0);
+    }
+
+    return displayData.map((item) => ({
+      period:
+        revenuePeriod === "day"
+          ? new Date(item.period).toLocaleDateString("vi-VN", {
+              day: "2-digit",
+              month: "2-digit",
+            })
+          : revenuePeriod === "week"
+          ? (() => {
+              const match = item.period.match(/^(\d{4})-W(\d{2})$/);
+              if (match) {
+                return `Tuần ${parseInt(match[2])}/${match[1]}`;
+              }
+              return `Tuần ${item.period}`;
+            })()
+          : revenuePeriod === "month"
+          ? item.period.split("-")[1] + "/" + item.period.split("-")[0]
+          : item.period,
+      revenue: item.revenue,
+      orders: item.orders,
+      fullPeriod: item.period,
+    }));
+  };
+
+  // Colors for pie chart
+  const COLORS = [
+    "#4F46E5",
+    "#10B981",
+    "#F59E0B",
+    "#EF4444",
+    "#8B5CF6",
+    "#06B6D4",
+    "#EC4899",
+  ];
 
   return (
     <div className="space-y-6">
@@ -74,7 +159,10 @@ const Statistics = () => {
       {summaryLoading ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           {[1, 2, 3, 4].map((i) => (
-            <div key={i} className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+            <div
+              key={i}
+              className="bg-white rounded-xl shadow-sm border border-gray-200 p-6"
+            >
               <div className="h-20 bg-gray-200 rounded animate-pulse" />
             </div>
           ))}
@@ -139,9 +227,7 @@ const Statistics = () => {
                 <p className="text-2xl font-bold text-gray-900">
                   {(summaryStats?.totalCustomers || 0).toLocaleString()}
                 </p>
-                <p className="text-xs text-gray-500 mt-2">
-                  Tổng số khách hàng
-                </p>
+                <p className="text-xs text-gray-500 mt-2">Tổng số khách hàng</p>
               </div>
               <div className="bg-orange-500 p-3 rounded-lg">
                 <Users className="text-white" size={24} />
@@ -189,7 +275,9 @@ const Statistics = () => {
       {/* Revenue Chart */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
         <div className="flex items-center justify-between mb-6 flex-wrap gap-4">
-          <h2 className="text-xl font-semibold text-gray-900">Doanh thu theo thời gian</h2>
+          <h2 className="text-xl font-semibold text-gray-900">
+            Doanh thu theo thời gian
+          </h2>
           <div className="flex items-center gap-4 flex-wrap">
             <div className="flex gap-2">
               {(["day", "week", "month", "year"] as const).map((period) => (
@@ -211,6 +299,28 @@ const Statistics = () => {
                     : "Năm"}
                 </button>
               ))}
+            </div>
+            <div className="flex gap-2">
+              <button
+                onClick={() => setChartType("bar")}
+                className={`px-3 py-1 text-sm rounded-lg transition-colors ${
+                  chartType === "bar"
+                    ? "bg-indigo-600 text-white"
+                    : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                }`}
+              >
+                Cột
+              </button>
+              <button
+                onClick={() => setChartType("line")}
+                className={`px-3 py-1 text-sm rounded-lg transition-colors ${
+                  chartType === "line"
+                    ? "bg-indigo-600 text-white"
+                    : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                }`}
+              >
+                Đường
+              </button>
             </div>
             {revenuePeriod === "day" && revenueChartData.length > 20 && (
               <div className="flex items-center gap-2">
@@ -248,122 +358,132 @@ const Statistics = () => {
           <div className="h-64 flex items-center justify-center">
             <div className="text-center">
               <p className="text-gray-500 mb-2">Không có dữ liệu doanh thu</p>
-              <p className="text-sm text-gray-400">Vui lòng kiểm tra lại dữ liệu đơn hàng</p>
+              <p className="text-sm text-gray-400">
+                Vui lòng kiểm tra lại dữ liệu đơn hàng
+              </p>
             </div>
           </div>
         ) : (
           <div className="space-y-6">
-            {/* Bar Chart */}
+            {/* Chart */}
             <div className="space-y-4">
-              <h3 className="text-sm font-medium text-gray-700">Biểu đồ doanh thu</h3>
-              <div className="relative" style={{ height: '320px' }}>
-                <div className="flex items-end gap-1 overflow-x-auto pb-4 px-2 h-full" style={{ scrollbarWidth: 'thin' }}>
-                  {(() => {
-                    // Tính maxRevenue một lần
-                    const revenues = revenueChartData.map((d) => d.revenue).filter((r) => r > 0);
-                    const maxRevenue = revenues.length > 0 ? Math.max(...revenues) : 0;
-                    
-                    if (maxRevenue === 0) {
-                      return (
-                        <div className="w-full flex items-center justify-center" style={{ height: '100%' }}>
-                          <p className="text-gray-400">Không có doanh thu trong khoảng thời gian này</p>
-                        </div>
-                      );
-                    }
-                    
-                    // Chiều cao tối đa của cột (pixel)
-                    const maxBarHeight = 280; // Để lại 40px cho label
-                    
-                    // Xử lý dữ liệu hiển thị
-                    let displayData = revenueChartData;
-                    
-                    // Nếu chọn hiển thị top N, sắp xếp và lấy top N
-                    if (showTopOnly && revenuePeriod === "day") {
-                      displayData = [...revenueChartData]
-                        .filter((d) => d.revenue > 0)
-                        .sort((a, b) => b.revenue - a.revenue)
-                        .slice(0, topCount)
-                        .sort((a, b) => a.period.localeCompare(b.period)); // Sắp xếp lại theo thời gian
-                    } else if (revenuePeriod === "day" && revenueChartData.length > 30) {
-                      // Filter bỏ các ngày có doanh thu = 0 nếu quá nhiều dữ liệu
-                      displayData = revenueChartData.filter((d) => d.revenue > 0);
-                    }
-                    
-                    // Nếu quá nhiều dữ liệu, chỉ hiển thị giá trị trên cột khi hover
-                    const showLabelsOnBars = displayData.length <= 20;
-                    
-                    return displayData.map((item) => {
-                      // Tính chiều cao theo pixel
-                      const heightPercent = maxRevenue > 0 ? (item.revenue / maxRevenue) * 100 : 0;
-                      const barHeight = heightPercent > 0 
-                        ? Math.max((heightPercent / 100) * maxBarHeight, heightPercent < 2 ? 8 : 4) 
-                        : 0;
-                      
-                      return (
-                        <div 
-                          key={item.period} 
-                          className="flex-shrink-0 flex flex-col items-center gap-1 group h-full" 
-                          style={{ minWidth: revenuePeriod === "day" ? "35px" : "50px" }}
-                        >
-                          {/* Value label above bar - chỉ hiển thị nếu ít dữ liệu hoặc cột đủ cao */}
-                          {showLabelsOnBars && barHeight > 30 && (
-                            <div className="text-[10px] font-medium text-gray-600 mb-1 text-center leading-tight">
-                              {formatVND(item.revenue).replace(/\s/g, '')}
-                            </div>
-                          )}
-                          
-                          <div className="w-full flex flex-col items-end justify-end relative flex-1" style={{ minHeight: '0' }}>
-                            {heightPercent > 0 ? (
-                              <div
-                                className="w-full bg-gradient-to-t from-indigo-600 to-indigo-400 rounded-t-md hover:from-indigo-700 hover:to-indigo-500 transition-all relative cursor-pointer shadow-sm hover:shadow-md"
-                                style={{ 
-                                  height: `${barHeight}px`, 
-                                  minHeight: barHeight > 0 ? '4px' : '0',
-                                  width: '100%'
-                                }}
-                              >
-                                {/* Tooltip on hover */}
-                                <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 bg-gray-900 text-white text-xs rounded-lg opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-20 pointer-events-none shadow-lg">
-                                  <div className="font-semibold">{formatVND(item.revenue)}</div>
-                                  <div className="text-gray-300 text-[10px] mt-1">{item.orders} đơn hàng</div>
-                                  <div className="absolute bottom-0 left-1/2 transform -translate-x-1/2 translate-y-1/2 rotate-45 w-2 h-2 bg-gray-900"></div>
-                                </div>
-                              </div>
-                            ) : (
-                              <div className="w-full h-0.5 bg-gray-200 rounded"></div>
-                            )}
-                          </div>
-                          
-                          {/* Date label */}
-                          <div className="text-[10px] text-gray-500 text-center whitespace-nowrap mt-1">
-                            {revenuePeriod === "day"
-                              ? new Date(item.period).toLocaleDateString("vi-VN", { day: "2-digit", month: "2-digit" })
-                              : revenuePeriod === "week"
-                              ? (() => {
-                                  // Parse YYYY-WW format
-                                  const match = item.period.match(/^(\d{4})-W(\d{2})$/);
-                                  if (match) {
-                                    return `Tuần ${parseInt(match[2])}/${match[1]}`;
-                                  }
-                                  // Fallback for old format
-                                  return `Tuần ${item.period}`;
-                                })()
-                              : revenuePeriod === "month"
-                              ? item.period.split("-")[1] + "/" + item.period.split("-")[0]
-                              : item.period}
-                          </div>
-                        </div>
-                      );
-                    });
-                  })()}
-                </div>
+              <h3 className="text-sm font-medium text-gray-700">
+                Biểu đồ doanh thu
+              </h3>
+              <div style={{ height: "400px", width: "100%" }}>
+                {getDisplayData().length === 0 ? (
+                  <div className="w-full h-full flex items-center justify-center">
+                    <p className="text-gray-400">
+                      Không có doanh thu trong khoảng thời gian này
+                    </p>
+                  </div>
+                ) : (
+                  <ResponsiveContainer width="100%" height="100%">
+                    {chartType === "bar" ? (
+                      <BarChart
+                        data={getDisplayData()}
+                        margin={{ top: 20, right: 30, left: 20, bottom: 60 }}
+                      >
+                        <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                        <XAxis
+                          dataKey="period"
+                          angle={-45}
+                          textAnchor="end"
+                          height={100}
+                          tick={{ fontSize: 12 }}
+                          interval={
+                            getDisplayData().length > 30
+                              ? Math.floor(getDisplayData().length / 15)
+                              : 0
+                          }
+                        />
+                        <YAxis
+                          tick={{ fontSize: 12 }}
+                          tickFormatter={(value) =>
+                            `${(value / 1000000).toFixed(1)}M`
+                          }
+                        />
+                        <Tooltip
+                          formatter={(value: number) => [
+                            formatVND(value),
+                            "Doanh thu",
+                          ]}
+                          contentStyle={{
+                            backgroundColor: "#1f2937",
+                            border: "none",
+                            borderRadius: "8px",
+                            color: "#fff",
+                          }}
+                        />
+                        <Legend />
+                        <Bar
+                          dataKey="revenue"
+                          fill="#4F46E5"
+                          radius={[8, 8, 0, 0]}
+                          name="Doanh thu"
+                        />
+                      </BarChart>
+                    ) : (
+                      <LineChart
+                        data={getDisplayData()}
+                        margin={{ top: 20, right: 30, left: 20, bottom: 60 }}
+                      >
+                        <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                        <XAxis
+                          dataKey="period"
+                          angle={-45}
+                          textAnchor="end"
+                          height={100}
+                          tick={{ fontSize: 12 }}
+                          interval={
+                            getDisplayData().length > 30
+                              ? Math.floor(getDisplayData().length / 15)
+                              : 0
+                          }
+                        />
+                        <YAxis
+                          tick={{ fontSize: 12 }}
+                          tickFormatter={(value) =>
+                            `${(value / 1000000).toFixed(1)}M`
+                          }
+                        />
+                        <Tooltip
+                          formatter={(value: number) => [
+                            formatVND(value),
+                            "Doanh thu",
+                          ]}
+                          contentStyle={{
+                            backgroundColor: "#1f2937",
+                            border: "none",
+                            borderRadius: "8px",
+                            color: "#fff",
+                          }}
+                        />
+                        <Legend />
+                        <Line
+                          type="monotone"
+                          dataKey="revenue"
+                          stroke="#4F46E5"
+                          strokeWidth={3}
+                          dot={{ fill: "#4F46E5", r: 4 }}
+                          activeDot={{ r: 6 }}
+                          name="Doanh thu"
+                        />
+                      </LineChart>
+                    )}
+                  </ResponsiveContainer>
+                )}
               </div>
               {revenuePeriod === "day" && revenueChartData.length > 30 && (
                 <div className="flex items-center justify-between text-xs text-gray-500 mt-2">
                   <p>
-                    Đang hiển thị {revenueChartData.filter((d) => d.revenue > 0).length} ngày có doanh thu (tổng {revenueChartData.length} ngày)
+                    Đang hiển thị{" "}
+                    {revenueChartData.filter((d) => d.revenue > 0).length} ngày
+                    có doanh thu (tổng {revenueChartData.length} ngày)
                   </p>
-                  <p className="text-indigo-600">Hover vào cột để xem chi tiết</p>
+                  <p className="text-indigo-600">
+                    Hover vào biểu đồ để xem chi tiết
+                  </p>
                 </div>
               )}
             </div>
@@ -389,11 +509,19 @@ const Statistics = () => {
                     <option value={revenueChartData.length}>Tất cả</option>
                   </select>
                   <span className="text-sm text-gray-500">
-                    Tổng: {revenueChartData.length} {revenuePeriod === "day" ? "ngày" : revenuePeriod === "week" ? "tuần" : revenuePeriod === "month" ? "tháng" : "năm"}
+                    Tổng: {revenueChartData.length}{" "}
+                    {revenuePeriod === "day"
+                      ? "ngày"
+                      : revenuePeriod === "week"
+                      ? "tuần"
+                      : revenuePeriod === "month"
+                      ? "tháng"
+                      : "năm"}
                   </span>
                 </div>
                 <div className="text-sm text-gray-500">
-                  Trang {tablePage} / {Math.ceil(revenueChartData.length / tablePageSize)}
+                  Trang {tablePage} /{" "}
+                  {Math.ceil(revenueChartData.length / tablePageSize)}
                 </div>
               </div>
 
@@ -422,22 +550,35 @@ const Statistics = () => {
                     </thead>
                     <tbody className="bg-white divide-y divide-gray-200">
                       {revenueChartData
-                        .slice((tablePage - 1) * tablePageSize, tablePage * tablePageSize)
+                        .slice(
+                          (tablePage - 1) * tablePageSize,
+                          tablePage * tablePageSize
+                        )
                         .map((item) => (
-                          <tr key={item.period} className="hover:bg-gray-50 transition-colors">
+                          <tr
+                            key={item.period}
+                            className="hover:bg-gray-50 transition-colors"
+                          >
                             <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
                               {revenuePeriod === "day"
-                                ? new Date(item.period).toLocaleDateString("vi-VN")
+                                ? new Date(item.period).toLocaleDateString(
+                                    "vi-VN"
+                                  )
                                 : revenuePeriod === "week"
                                 ? (() => {
-                                    const match = item.period.match(/^(\d{4})-W(\d{2})$/);
+                                    const match =
+                                      item.period.match(/^(\d{4})-W(\d{2})$/);
                                     if (match) {
-                                      return `Tuần ${parseInt(match[2])}/${match[1]}`;
+                                      return `Tuần ${parseInt(match[2])}/${
+                                        match[1]
+                                      }`;
                                     }
                                     return `Tuần ${item.period}`;
                                   })()
                                 : revenuePeriod === "month"
-                                ? item.period.split("-")[1] + "/" + item.period.split("-")[0]
+                                ? item.period.split("-")[1] +
+                                  "/" +
+                                  item.period.split("-")[0]
                                 : item.period}
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
@@ -464,36 +605,56 @@ const Statistics = () => {
                     Trước
                   </button>
                   <div className="flex items-center gap-2">
-                    {Array.from({ length: Math.min(5, Math.ceil(revenueChartData.length / tablePageSize)) }, (_, i) => {
-                      const totalPages = Math.ceil(revenueChartData.length / tablePageSize);
-                      let pageNum;
-                      if (totalPages <= 5) {
-                        pageNum = i + 1;
-                      } else if (tablePage <= 3) {
-                        pageNum = i + 1;
-                      } else if (tablePage >= totalPages - 2) {
-                        pageNum = totalPages - 4 + i;
-                      } else {
-                        pageNum = tablePage - 2 + i;
+                    {Array.from(
+                      {
+                        length: Math.min(
+                          5,
+                          Math.ceil(revenueChartData.length / tablePageSize)
+                        ),
+                      },
+                      (_, i) => {
+                        const totalPages = Math.ceil(
+                          revenueChartData.length / tablePageSize
+                        );
+                        let pageNum;
+                        if (totalPages <= 5) {
+                          pageNum = i + 1;
+                        } else if (tablePage <= 3) {
+                          pageNum = i + 1;
+                        } else if (tablePage >= totalPages - 2) {
+                          pageNum = totalPages - 4 + i;
+                        } else {
+                          pageNum = tablePage - 2 + i;
+                        }
+                        return (
+                          <button
+                            key={pageNum}
+                            onClick={() => setTablePage(pageNum)}
+                            className={`px-3 py-1 text-sm rounded-lg transition-colors ${
+                              tablePage === pageNum
+                                ? "bg-indigo-600 text-white"
+                                : "bg-white text-gray-700 border border-gray-300 hover:bg-gray-50"
+                            }`}
+                          >
+                            {pageNum}
+                          </button>
+                        );
                       }
-                      return (
-                        <button
-                          key={pageNum}
-                          onClick={() => setTablePage(pageNum)}
-                          className={`px-3 py-1 text-sm rounded-lg transition-colors ${
-                            tablePage === pageNum
-                              ? "bg-indigo-600 text-white"
-                              : "bg-white text-gray-700 border border-gray-300 hover:bg-gray-50"
-                          }`}
-                        >
-                          {pageNum}
-                        </button>
-                      );
-                    })}
+                    )}
                   </div>
                   <button
-                    onClick={() => setTablePage((p) => Math.min(Math.ceil(revenueChartData.length / tablePageSize), p + 1))}
-                    disabled={tablePage >= Math.ceil(revenueChartData.length / tablePageSize)}
+                    onClick={() =>
+                      setTablePage((p) =>
+                        Math.min(
+                          Math.ceil(revenueChartData.length / tablePageSize),
+                          p + 1
+                        )
+                      )
+                    }
+                    disabled={
+                      tablePage >=
+                      Math.ceil(revenueChartData.length / tablePageSize)
+                    }
                     className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                   >
                     Sau
@@ -552,25 +713,141 @@ const Statistics = () => {
             {orderLoading ? (
               <div className="h-32 bg-gray-200 rounded animate-pulse" />
             ) : orderStatusData.length > 0 ? (
-              <div className="space-y-3">
-                {orderStatusData.map((item) => (
-                  <div
-                    key={item.status}
-                    className="flex items-center justify-between p-4 bg-gray-50 rounded-lg"
-                  >
-                    <div>
-                      <p className="font-medium text-gray-900">{item.status}</p>
-                      <p className="text-sm text-gray-500">
-                        {item.count} đơn hàng
-                      </p>
+              <div className="space-y-6">
+                {/* Pie Chart */}
+                <div style={{ height: "300px", width: "100%" }}>
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie
+                        data={orderStatusData}
+                        cx="50%"
+                        cy="50%"
+                        labelLine={false}
+                        label={(props: any) => {
+                          const {
+                            cx,
+                            cy,
+                            midAngle,
+                            innerRadius,
+                            outerRadius,
+                            percent,
+                            payload,
+                          } = props;
+                          const RADIAN = Math.PI / 180;
+                          const radius =
+                            innerRadius + (outerRadius - innerRadius) * 0.5;
+                          const x = cx + radius * Math.cos(-midAngle * RADIAN);
+                          const y = cy + radius * Math.sin(-midAngle * RADIAN);
+                          const index = orderStatusData.findIndex(
+                            (d) => d.status === payload.status
+                          );
+                          const isHovered = hoveredPieIndex === index;
+
+                          return (
+                            <text
+                              x={x}
+                              y={y}
+                              fill={isHovered ? "#ffffff" : "#374151"}
+                              textAnchor={x > cx ? "start" : "end"}
+                              dominantBaseline="central"
+                              style={{
+                                fontSize: "12px",
+                                fontWeight: "500",
+                                textShadow: isHovered
+                                  ? "0 0 3px rgba(0,0,0,0.5)"
+                                  : "none",
+                              }}
+                            >
+                              {`${payload.status}: ${(percent * 100).toFixed(
+                                0
+                              )}%`}
+                            </text>
+                          );
+                        }}
+                        outerRadius={100}
+                        fill="#8884d8"
+                        dataKey="count"
+                        nameKey="status"
+                      >
+                        {orderStatusData.map((_, index) => (
+                          <Cell
+                            key={`cell-${index}`}
+                            fill={COLORS[index % COLORS.length]}
+                            style={{
+                              cursor: "pointer",
+                            }}
+                            onMouseEnter={() => setHoveredPieIndex(index)}
+                            onMouseLeave={() => setHoveredPieIndex(null)}
+                          />
+                        ))}
+                      </Pie>
+                      <Tooltip
+                        formatter={(
+                          value: number,
+                          name: string,
+                          props: any
+                        ) => {
+                          const status = props.payload?.status || name;
+                          return [`${value} đơn hàng`, status];
+                        }}
+                        contentStyle={{
+                          backgroundColor: "#ffffff",
+                          border: "1px solid #e5e7eb",
+                          borderRadius: "8px",
+                          color: "#1f2937",
+                          boxShadow:
+                            "0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)",
+                          padding: "12px 16px",
+                        }}
+                        labelStyle={{
+                          color: "#1f2937",
+                          fontWeight: "600",
+                          marginBottom: "4px",
+                        }}
+                        itemStyle={{
+                          color: "#374151",
+                        }}
+                      />
+                      <Legend
+                        formatter={(value, entry) => {
+                          const payload = entry.payload as any;
+                          return payload?.status || value;
+                        }}
+                      />
+                    </PieChart>
+                  </ResponsiveContainer>
+                </div>
+                {/* List */}
+                <div className="space-y-3">
+                  {orderStatusData.map((item, index) => (
+                    <div
+                      key={item.status}
+                      className="flex items-center justify-between p-4 bg-gray-50 rounded-lg"
+                    >
+                      <div className="flex items-center gap-3">
+                        <div
+                          className="w-4 h-4 rounded"
+                          style={{
+                            backgroundColor: COLORS[index % COLORS.length],
+                          }}
+                        />
+                        <div>
+                          <p className="font-medium text-gray-900">
+                            {item.status}
+                          </p>
+                          <p className="text-sm text-gray-500">
+                            {item.count} đơn hàng
+                          </p>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <p className="font-semibold text-gray-900">
+                          {formatVND(item.revenue)}
+                        </p>
+                      </div>
                     </div>
-                    <div className="text-right">
-                      <p className="font-semibold text-gray-900">
-                        {formatVND(item.revenue)}
-                      </p>
-                    </div>
-                  </div>
-                ))}
+                  ))}
+                </div>
               </div>
             ) : (
               <div className="text-center text-gray-500 py-8">
@@ -585,4 +862,3 @@ const Statistics = () => {
 };
 
 export default Statistics;
-
