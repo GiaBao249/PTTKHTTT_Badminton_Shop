@@ -13,14 +13,10 @@ const FeaturedProducts = () => {
     []
   );
   const navigate = useNavigate();
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const { token } = useAuth();
   useEffect(() => {
     const fetchProducts = async () => {
       try {
-        setLoading(true);
-        setError(null);
         const res = await fetch(`${API_BASE}/api/products/featured-products`);
         if (!res.ok) {
           throw new Error(`HTTP ${res.status}`);
@@ -28,10 +24,7 @@ const FeaturedProducts = () => {
         const data: ProductListItem[] = await res.json();
         setFeaturedProducts(data);
       } catch (e: any) {
-        setError(e.message || "Lỗi khi tải sản phẩm");
         console.error("Lỗi khi tải sản phẩm:", e);
-      } finally {
-        setLoading(false);
       }
     };
     fetchProducts();

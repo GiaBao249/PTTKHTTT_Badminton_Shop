@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { CheckCircle, Loader2 } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import { useAuth } from "../contexts/AuthContext";
 
 const VietQRTestCallback = () => {
@@ -12,7 +12,6 @@ const VietQRTestCallback = () => {
   const getApiBase = () => {
     const envUrl = import.meta.env.VITE_API_URL || "http://localhost:3000";
     const currentHost = window.location.hostname;
-    const currentPort = window.location.port || "5173";
 
     // Nếu đang truy cập từ IP address (không phải localhost)
     if (currentHost !== "localhost" && currentHost !== "127.0.0.1") {

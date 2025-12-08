@@ -1,13 +1,5 @@
 import { useEffect, useState } from "react";
-import {
-  Search,
-  Eye,
-  Edit2,
-  X,
-  ChevronLeft,
-  ChevronRight,
-  Download,
-} from "lucide-react";
+import { Search, Eye, Edit2, X, Download } from "lucide-react";
 import { PDFDownloadLink } from "@react-pdf/renderer";
 import {
   DialogViewDetails,
