@@ -17,7 +17,7 @@ const Header = () => {
   const [searchResults, setSearchResults] = useState<ProductListItem[]>([]);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isSearching, setIsSearching] = useState(false);
-  const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const searchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const searchRef = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
   useEffect(() => {
@@ -121,7 +121,10 @@ const Header = () => {
   // Close search dropdown when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (searchRef.current && !searchRef.current.contains(event.target as Node)) {
+      if (
+        searchRef.current &&
+        !searchRef.current.contains(event.target as Node)
+      ) {
         setIsSearchOpen(false);
       }
     };
@@ -133,7 +136,9 @@ const Header = () => {
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (searchTerm.trim()) {
-      navigate(`/products-page?search=${encodeURIComponent(searchTerm.trim())}`);
+      navigate(
+        `/products-page?search=${encodeURIComponent(searchTerm.trim())}`
+      );
       setSearchTerm("");
       setIsSearchOpen(false);
     }
@@ -252,7 +257,10 @@ const Header = () => {
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   onFocus={() => {
-                    if (searchResults.length > 0 || searchTerm.trim().length >= 2) {
+                    if (
+                      searchResults.length > 0 ||
+                      searchTerm.trim().length >= 2
+                    ) {
                       setIsSearchOpen(true);
                     }
                   }}
@@ -306,7 +314,8 @@ const Header = () => {
                               {product.product_name}
                             </p>
                             <p className="text-sm text-gray-500">
-                              {product.category?.category_name || "Không có danh mục"}
+                              {product.category?.category_name ||
+                                "Không có danh mục"}
                             </p>
                           </div>
                           <div className="text-sm font-semibold text-gray-900">

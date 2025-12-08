@@ -1,4 +1,5 @@
-import React, { Component, ErrorInfo, ReactNode } from "react";
+import { Component } from "react";
+import type { ErrorInfo, ReactNode } from "react";
 
 interface Props {
   children: ReactNode;
@@ -28,7 +29,9 @@ class ErrorBoundary extends Component<Props, State> {
       return (
         <div className="flex items-center justify-center min-h-screen bg-gray-50">
           <div className="text-center p-8">
-            <h1 className="text-2xl font-bold text-red-600 mb-4">Đã xảy ra lỗi</h1>
+            <h1 className="text-2xl font-bold text-red-600 mb-4">
+              Đã xảy ra lỗi
+            </h1>
             <p className="text-gray-600 mb-4">
               {this.state.error?.message || "Có lỗi xảy ra trong ứng dụng"}
             </p>
@@ -42,7 +45,9 @@ class ErrorBoundary extends Component<Props, State> {
               Tải lại trang
             </button>
             <details className="mt-4 text-left">
-              <summary className="cursor-pointer text-sm text-gray-500">Chi tiết lỗi</summary>
+              <summary className="cursor-pointer text-sm text-gray-500">
+                Chi tiết lỗi
+              </summary>
               <pre className="mt-2 p-4 bg-gray-100 rounded text-xs overflow-auto">
                 {this.state.error?.stack}
               </pre>
@@ -57,4 +62,3 @@ class ErrorBoundary extends Component<Props, State> {
 }
 
 export default ErrorBoundary;
-

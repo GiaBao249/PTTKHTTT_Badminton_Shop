@@ -1,12 +1,5 @@
 import { useState, useEffect } from "react";
-import {
-  Search,
-  Eye,
-  Download,
-  ChevronLeft,
-  ChevronRight,
-  Filter,
-} from "lucide-react";
+import { Search, Eye, Download, Filter } from "lucide-react";
 import { PDFDownloadLink } from "@react-pdf/renderer";
 import { Dialog } from "../Components";
 import { useInvoices, type Invoice } from "../hook/useInvoices";

@@ -62,7 +62,7 @@ const Cart = () => {
           price: item.product_item.product.price,
           description: null,
           category: item.product_item.product.category || null,
-          thumbnail: item.product_item.product.thumbnail || null,
+          thumbnail: (item.product_item.product as any).thumbnail || null,
         };
         return {
           product: {

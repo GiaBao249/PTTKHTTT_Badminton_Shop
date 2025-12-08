@@ -23,7 +23,7 @@ type TopProductsResponse = {
 };
 
 const HotProducts = () => {
-  const { user, token } = useAuth();
+  const { token } = useAuth();
   const navigate = useNavigate();
   const [selectedDescription, setSelectedDescription] = useState<Description>({
     title: "Vợt cầu lông",

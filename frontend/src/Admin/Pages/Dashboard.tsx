@@ -1,11 +1,8 @@
-import { useEffect, useState, createContext, useContext } from "react";
+import { useEffect, useState } from "react";
 import { ShoppingBag, Users, Package, TrendingUp } from "lucide-react";
-import { useProducts } from "../hook/useProducts";
-import { useOrders } from "../hook/useOrders";
-import { useProductItems } from "../hook/useProductItems";
 import { useCustomers } from "../hook/useCustomers";
 import { useRecentOrders } from "../hook/useRecentOrders";
-import { useDashBoard } from "../hook/useDashBoard";
+import { useDashBoard } from "../hook/useDashboard";
 import { useTopSellingProducts } from "../hook/useTopSellingProducts";
 
 const Dashboard = () => {
