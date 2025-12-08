@@ -13,11 +13,12 @@ export const authRequired = (
   req: Request,
   res: Response,
   next: NextFunction
-) => {
+): void => {
   try {
     const authHeader = req.headers.authorization;
     if (!authHeader || !authHeader?.startsWith("Bearer ")) {
-      return res.status(401).json({ error: "Invalid token" });
+      res.status(401).json({ error: "Invalid token" });
+      return;
     }
     const token = authHeader.substring(7);
     const decoded = jwt.verify(token, JWT_SECRET!) as any;

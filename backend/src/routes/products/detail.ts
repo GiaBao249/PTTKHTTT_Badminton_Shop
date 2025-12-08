@@ -2,7 +2,7 @@ import { Request, Response, Router } from "express";
 import { supabase } from "../../config/supabase";
 
 export function registerDetailRoutes(router: Router) {
-  router.get("/:id", async (req: Request, res: Response) => {
+  router.get("/:id", async (req: Request, res: Response): Promise<void> => {
     try {
       const productId = req.params.id;
 
@@ -27,7 +27,10 @@ export function registerDetailRoutes(router: Router) {
         .or("is_deleted.is.null,is_deleted.eq.false")
         .single();
       if (productError) throw productError;
-      if (!product) return res.status(404).json({ error: "Product not found" });
+      if (!product) {
+        res.status(404).json({ error: "Product not found" });
+        return;
+      }
 
       const { data: items, error: itemsError } = await supabase
         .from("product_item")
@@ -63,7 +66,9 @@ export function registerDetailRoutes(router: Router) {
           quantity: it.quantity,
           images: (it.product_image ?? []).map((img: any) => {
             // Get public URL from Supabase Storage
-            const { data: { publicUrl } } = supabase.storage
+            const {
+              data: { publicUrl },
+            } = supabase.storage
               .from("product-images")
               .getPublicUrl(img.image_filename);
             return {

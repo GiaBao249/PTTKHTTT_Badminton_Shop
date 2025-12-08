@@ -33,7 +33,7 @@ export class ProductController {
    */
   getProductById = async (req: Request, res: Response): Promise<void> => {
     try {
-      const productId = parseInt(req.params.id);
+      const productId = parseInt(req.params.id || "0");
       if (isNaN(productId)) {
         res.status(400).json({ error: "Invalid product ID" });
         return;
@@ -84,7 +84,7 @@ export class ProductController {
    */
   updateProduct = async (req: Request, res: Response): Promise<void> => {
     try {
-      const productId = parseInt(req.params.id);
+      const productId = parseInt(req.params.id || "0");
       if (isNaN(productId)) {
         res.status(400).json({ error: "Invalid product ID" });
         return;

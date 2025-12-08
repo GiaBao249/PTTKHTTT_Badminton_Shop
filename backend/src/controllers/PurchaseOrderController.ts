@@ -15,10 +15,7 @@ export class PurchaseOrderController {
    * GET /api/admin/getPurchaseOrders
    * Lấy tất cả purchase orders (GIỮ NGUYÊN endpoint cho frontend)
    */
-  getAllPurchaseOrders = async (
-    req: Request,
-    res: Response
-  ): Promise<void> => {
+  getAllPurchaseOrders = async (req: Request, res: Response): Promise<void> => {
     try {
       const purchaseOrders =
         await this.purchaseOrderService.getAllPurchaseOrders();
@@ -30,9 +27,7 @@ export class PurchaseOrderController {
           .json({ error: error.message, code: error.code });
       } else {
         console.error("Error getting purchase orders:", error);
-        res
-          .status(500)
-          .json({ error: "Lỗi khi lấy danh sách phiếu nhập" });
+        res.status(500).json({ error: "Lỗi khi lấy danh sách phiếu nhập" });
       }
     }
   };
@@ -46,7 +41,7 @@ export class PurchaseOrderController {
     res: Response
   ): Promise<void> => {
     try {
-      const purchaseOrderId = parseInt(req.params.id);
+      const purchaseOrderId = parseInt(req.params.id || "0");
       if (isNaN(purchaseOrderId)) {
         res.status(400).json({ error: "Invalid purchase order ID" });
         return;
@@ -71,14 +66,12 @@ export class PurchaseOrderController {
    * POST /api/admin/createPurchaseOrder
    * Tạo purchase order mới (GIỮ NGUYÊN endpoint cho frontend)
    */
-  createPurchaseOrder = async (
-    req: Request,
-    res: Response
-  ): Promise<void> => {
+  createPurchaseOrder = async (req: Request, res: Response): Promise<void> => {
     try {
       const createDto: CreatePurchaseOrderDto = req.body;
-      const purchaseOrder =
-        await this.purchaseOrderService.createPurchaseOrder(createDto);
+      const purchaseOrder = await this.purchaseOrderService.createPurchaseOrder(
+        createDto
+      );
 
       res.status(201).json({
         success: true,
@@ -99,4 +92,3 @@ export class PurchaseOrderController {
     }
   };
 }
-

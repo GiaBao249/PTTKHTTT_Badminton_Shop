@@ -2,7 +2,7 @@ import { Request, Response, Router } from "express";
 import { supabase } from "../../config/supabase";
 
 export function registerFilterRoutes(router: Router) {
-  router.post("/filter", async (req: Request, res: Response) => {
+  router.post("/filter", async (req: Request, res: Response): Promise<void> => {
     try {
       const { optionIds, categoryId } = req.body as {
         optionIds?: number[];
@@ -41,7 +41,10 @@ export function registerFilterRoutes(router: Router) {
       if (baseError) throw baseError;
 
       const baseProducts = products ?? [];
-      if (baseProducts.length === 0) return res.json([]);
+      if (baseProducts.length === 0) {
+        res.json([]);
+        return;
+      }
 
       const productIds = baseProducts.map((p: any) => p.product_id);
 
@@ -62,7 +65,8 @@ export function registerFilterRoutes(router: Router) {
           ...p,
           total_quantity: idToTotalQty.get(p.product_id) ?? 0,
         }));
-        return res.json(withInventory);
+        res.json(withInventory);
+        return;
       }
 
       const { data: itemsWithCfg, error: cfgError } = await supabase
@@ -95,7 +99,10 @@ export function registerFilterRoutes(router: Router) {
         productIdMatches.has(p.product_id)
       );
 
-      if (filteredProducts.length === 0) return res.json([]);
+      if (filteredProducts.length === 0) {
+        res.json([]);
+        return;
+      }
 
       const { data: qtyItems, error: qtyError } = await supabase
         .from("product_item")

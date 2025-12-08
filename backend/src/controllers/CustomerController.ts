@@ -29,7 +29,7 @@ export class CustomerController {
 
   getCustomerById = async (req: Request, res: Response): Promise<void> => {
     try {
-      const customerId = parseInt(req.params.id);
+      const customerId = parseInt(req.params.id || "0");
       if (isNaN(customerId)) {
         res.status(400).json({ error: "Invalid customer ID" });
         return;
