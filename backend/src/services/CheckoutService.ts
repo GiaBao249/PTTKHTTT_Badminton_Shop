@@ -16,8 +16,13 @@ export class CheckoutService {
     customerId: number,
     checkoutDto: CheckoutDto
   ): Promise<CheckoutResponse> {
-    const { cart_items, address_id, shipping_info, payment_method, total_amount } =
-      checkoutDto;
+    const {
+      cart_items,
+      address_id,
+      shipping_info,
+      payment_method,
+      total_amount,
+    } = checkoutDto;
 
     // Validation
     if (!cart_items || cart_items.length === 0) {
@@ -65,6 +70,13 @@ export class CheckoutService {
     }
 
     // Tạo order
+    if (!finalAddressId) {
+      throw new AppError(
+        400,
+        "Địa chỉ giao hàng là bắt buộc",
+        "VALIDATION_ERROR"
+      );
+    }
     const orderId = await this.checkoutRepo.createOrder(
       customerId,
       finalAddressId,
@@ -103,7 +115,11 @@ export class CheckoutService {
         requires_payment: true,
       };
     } else {
-      throw new AppError(400, "Phương thức thanh toán không hợp lệ", "VALIDATION_ERROR");
+      throw new AppError(
+        400,
+        "Phương thức thanh toán không hợp lệ",
+        "VALIDATION_ERROR"
+      );
     }
   }
 
@@ -138,4 +154,3 @@ export class CheckoutService {
     }
   }
 }
-

@@ -1,0 +1,1 @@
+{"version":3,"file":"TopSellingProductService.d.ts","sourceRoot":"","sources":["../../src/services/TopSellingProductService.ts"],"names":[],"mappings":"AACA,OAAO,EAAE,2BAA2B,EAAE,MAAM,6CAA6C,CAAC;AAC1F,OAAO,EAAE,iBAAiB,EAAE,MAAM,mBAAmB,CAAC;AAGtD,qBACa,wBAAwB;IAGjC,OAAO,CAAC,WAAW;gBAAX,WAAW,EAAE,2BAA2B;IAE5C,qBAAqB,CAAC,KAAK,GAAE,MAAU,GAAG,OAAO,CAAC,iBAAiB,EAAE,CAAC;CA8D7E"}

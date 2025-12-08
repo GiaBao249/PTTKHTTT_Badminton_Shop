@@ -1,0 +1,1 @@
+{"version":3,"file":"requireAdminRole.d.ts","sourceRoot":"","sources":["../../src/middleware/requireAdminRole.ts"],"names":[],"mappings":"AAAA,OAAO,EAAE,OAAO,EAAE,QAAQ,EAAE,YAAY,EAAE,MAAM,SAAS,CAAC;AAG1D;;;GAGG;AACH,eAAO,MAAM,gBAAgB,GAC3B,KAAK,OAAO,EACZ,KAAK,QAAQ,EACb,MAAM,YAAY,uDAsGnB,CAAC"}

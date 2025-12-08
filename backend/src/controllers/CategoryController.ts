@@ -25,7 +25,7 @@ export class CategoryController {
   };
   getCategoryById = async (req: Request, res: Response): Promise<void> => {
     try {
-      const categoryId = parseInt(req.params.id);
+      const categoryId = parseInt(req.params.id || "0");
       if (isNaN(categoryId)) {
         res.status(400).json({ error: "Invalid category ID" });
         return;
@@ -67,7 +67,7 @@ export class CategoryController {
   updateCategory = async (req: Request, res: Response): Promise<void> => {
     try {
       const dto: UpdateCategoryDto = req.body;
-      const categoryId = parseInt(req.params.id);
+      const categoryId = parseInt(req.params.id || "0");
       if (isNaN(categoryId)) {
         res.status(400).json({ error: "Invalid category id" });
         return;
@@ -94,7 +94,7 @@ export class CategoryController {
   };
   deleteCategory = async (req: Request, res: Response): Promise<void> => {
     try {
-      const categoryId = parseInt(req.params.id);
+      const categoryId = parseInt(req.params.id || "0");
       if (isNaN(categoryId)) {
         res.status(400).json({ error: "Invalid category ID" });
         return;

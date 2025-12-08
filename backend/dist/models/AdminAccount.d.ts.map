@@ -1,0 +1,1 @@
+{"version":3,"file":"AdminAccount.d.ts","sourceRoot":"","sources":["../../src/models/AdminAccount.ts"],"names":[],"mappings":"AAAA,MAAM,WAAW,YAAY;IAC3B,EAAE,EAAE,MAAM,CAAC;IACX,QAAQ,EAAE,MAAM,CAAC;IACjB,WAAW,EAAE,MAAM,CAAC;IACpB,QAAQ,CAAC,EAAE;QACT,IAAI,EAAE,MAAM,CAAC;KACd,CAAC;CACH"}

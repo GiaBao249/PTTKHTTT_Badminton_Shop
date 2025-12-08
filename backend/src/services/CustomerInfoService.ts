@@ -27,7 +27,11 @@ export class CustomerInfoService {
     ]);
 
     if (!customer) {
-      throw new AppError(404, "Không tìm thấy khách hàng", "CUSTOMER_NOT_FOUND");
+      throw new AppError(
+        404,
+        "Không tìm thấy khách hàng",
+        "CUSTOMER_NOT_FOUND"
+      );
     }
 
     return {
@@ -44,10 +48,14 @@ export class CustomerInfoService {
     updateDto: UpdateCustomerDto
   ): Promise<CustomerInfo> {
     const updateData: UpdateCustomerDto = {};
-    if (updateDto.customer_name) updateData.customer_name = updateDto.customer_name;
-    if (updateDto.customer_phone) updateData.customer_phone = updateDto.customer_phone;
-    if (updateDto.customer_gender) updateData.customer_gender = updateDto.customer_gender;
-    if (updateDto.customer_email) updateData.customer_email = updateDto.customer_email;
+    if (updateDto.customer_name)
+      updateData.customer_name = updateDto.customer_name;
+    if (updateDto.customer_phone)
+      updateData.customer_phone = updateDto.customer_phone;
+    if (updateDto.customer_gender)
+      updateData.customer_gender = updateDto.customer_gender;
+    if (updateDto.customer_email)
+      updateData.customer_email = updateDto.customer_email;
 
     return await this.customerInfoRepo.updateCustomer(customerId, updateData);
   }
@@ -137,12 +145,13 @@ export class CustomerInfoService {
     updateData: UpdateAddressDto
   ): Promise<any> {
     const updateAddressData: UpdateAddressDto = {};
-    if (updateData.address_line) updateAddressData.address_line = updateData.address_line;
+    if (updateData.address_line)
+      updateAddressData.address_line = updateData.address_line;
     if (updateData.ward) updateAddressData.ward = updateData.ward;
     if (updateData.district) updateAddressData.district = updateData.district;
     if (updateData.city) updateAddressData.city = updateData.city;
     if (updateData.postal_code !== undefined)
-      updateAddressData.postal_code = updateData.postal_code || null;
+      updateAddressData.postal_code = updateData.postal_code ?? undefined;
 
     return await this.customerInfoRepo.updateAddress(
       customerId,
@@ -151,4 +160,3 @@ export class CustomerInfoService {
     );
   }
 }
-

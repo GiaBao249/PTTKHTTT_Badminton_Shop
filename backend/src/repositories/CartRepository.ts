@@ -63,10 +63,34 @@ export class CartRepository {
       .eq("cart_id", cartId);
 
     if (error) throw error;
-    return (data ?? []).filter((item: any) => {
+    const filtered = (data ?? []).filter((item: any) => {
       const product = item.product_item?.product;
-      return product && (product.is_deleted === false || product.is_deleted === null);
+      return (
+        product && (product.is_deleted === false || product.is_deleted === null)
+      );
     });
+    return filtered.map((item: any) => ({
+      quantity: item.quantity,
+      total_amount: item.total_amount,
+      product_item: item.product_item
+        ? {
+            product_item_id: item.product_item.product_item_id,
+            product_id: item.product_item.product_id,
+            quantity: item.product_item.quantity,
+            product: item.product_item.product
+              ? {
+                  product_id: item.product_item.product.product_id,
+                  product_name: item.product_item.product.product_name,
+                  price: item.product_item.product.price,
+                  is_deleted: item.product_item.product.is_deleted,
+                  category: Array.isArray(item.product_item.product.category)
+                    ? item.product_item.product.category[0]
+                    : item.product_item.product.category,
+                }
+              : undefined,
+          }
+        : undefined,
+    })) as CartItem[];
   }
 
   /**
@@ -214,4 +238,3 @@ export class CartRepository {
     if (error) throw error;
   }
 }
-

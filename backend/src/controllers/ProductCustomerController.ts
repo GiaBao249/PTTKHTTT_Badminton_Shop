@@ -41,14 +41,15 @@ export class ProductCustomerController {
     res: Response
   ): Promise<void> => {
     try {
-      const categoryId = parseInt(req.params.categoryId);
+      const categoryId = parseInt(req.params.categoryId || "0");
       if (isNaN(categoryId)) {
         res.status(400).json({ error: "Invalid category ID" });
         return;
       }
 
-      const products =
-        await this.productCustomerService.getProductsByCategory(categoryId);
+      const products = await this.productCustomerService.getProductsByCategory(
+        categoryId
+      );
       res.json(products);
     } catch (error: any) {
       if (error instanceof AppError) {
@@ -70,7 +71,9 @@ export class ProductCustomerController {
   searchProducts = async (req: Request, res: Response): Promise<void> => {
     try {
       const keyword = req.params.keyword;
-      const products = await this.productCustomerService.searchProducts(keyword);
+      const products = await this.productCustomerService.searchProducts(
+        keyword || ""
+      );
       res.json(products);
     } catch (error: any) {
       if (error instanceof AppError) {
@@ -113,10 +116,7 @@ export class ProductCustomerController {
    * GET /api/products/featured-products
    * Lấy featured products
    */
-  getFeaturedProducts = async (
-    req: Request,
-    res: Response
-  ): Promise<void> => {
+  getFeaturedProducts = async (req: Request, res: Response): Promise<void> => {
     try {
       const products = await this.productCustomerService.getFeaturedProducts(4);
       res.json(products);
@@ -139,7 +139,7 @@ export class ProductCustomerController {
    */
   getProductDetail = async (req: Request, res: Response): Promise<void> => {
     try {
-      const productId = parseInt(req.params.id);
+      const productId = parseInt(req.params.id || "0");
       if (isNaN(productId)) {
         res.status(400).json({ error: "Invalid product ID" });
         return;
@@ -171,7 +171,7 @@ export class ProductCustomerController {
     res: Response
   ): Promise<void> => {
     try {
-      const categoryId = parseInt(req.params.categoryId);
+      const categoryId = parseInt(req.params.categoryId || "0");
       if (isNaN(categoryId)) {
         res.status(400).json({ error: "Invalid category ID" });
         return;
@@ -244,12 +244,10 @@ export class ProductCustomerController {
    * GET /api/products/top-by-categories
    * Lấy top products by category
    */
-  getTopByCategories = async (
-    req: Request,
-    res: Response
-  ): Promise<void> => {
+  getTopByCategories = async (req: Request, res: Response): Promise<void> => {
     try {
-      const topProducts = await this.productCustomerService.getTopByCategories();
+      const topProducts =
+        await this.productCustomerService.getTopByCategories();
       res.json(topProducts);
     } catch (error: any) {
       if (error instanceof AppError) {
@@ -273,14 +271,15 @@ export class ProductCustomerController {
     res: Response
   ): Promise<void> => {
     try {
-      const productId = parseInt(req.params.id);
+      const productId = parseInt(req.params.id || "0");
       if (isNaN(productId)) {
         res.status(400).json({ error: "Invalid product ID" });
         return;
       }
 
-      const specs =
-        await this.productCustomerService.getProductSpecification(productId);
+      const specs = await this.productCustomerService.getProductSpecification(
+        productId
+      );
       res.json(specs);
     } catch (error: any) {
       if (error instanceof AppError) {
@@ -295,4 +294,3 @@ export class ProductCustomerController {
     }
   };
 }
-

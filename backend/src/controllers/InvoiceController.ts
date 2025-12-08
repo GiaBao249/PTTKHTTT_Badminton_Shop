@@ -32,7 +32,7 @@ export class InvoiceController {
 
   getInvoiceByOrderId = async (req: Request, res: Response): Promise<void> => {
     try {
-      const orderId = parseInt(req.params.orderId);
+      const orderId = parseInt(req.params.orderId || "0");
       if (isNaN(orderId)) {
         res.status(400).json({ error: "Invalid order ID" });
         return;
